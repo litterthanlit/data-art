@@ -54,12 +54,20 @@
 
       <aside id="drawer" class="drawer" aria-label="Playground controls">
         <div class="drawer-head">
-          <span>PLAYGROUND</span>
+          <div class="project-title">
+            <span>PROJECT</span>
+            <strong>Weather Galaxy</strong>
+            <p>Varna / Open-Meteo archive</p>
+          </div>
+          <div class="deploy-status" aria-label="Live dataset status">
+            <span aria-hidden="true"></span>
+            Live
+          </div>
           <button id="drawerClose" class="icon-button" type="button" aria-label="Close controls">×</button>
         </div>
 
         <section class="control-block">
-          <label>MODE</label>
+          <label>View Mode</label>
           <div class="segmented" data-control="mode">
             <button type="button" data-value="galaxy" aria-pressed="true">Galaxy</button>
             <button type="button" data-value="storm">Storm</button>
@@ -70,7 +78,7 @@
         </section>
 
         <section class="control-block">
-          <label>FOCUS</label>
+          <label>Data Focus</label>
           <div class="segmented" data-control="focus">
             <button type="button" data-value="humidity" aria-pressed="true">Humidity</button>
             <button type="button" data-value="temperature">Temp</button>
