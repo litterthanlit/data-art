@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Varna Weather Galaxy</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #f7f7f2;
+        --soft: rgba(247, 247, 242, 0.64);
+        --line: rgba(247, 247, 242, 0.42);
+        --panel: rgba(0, 0, 0, 0.42);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow: hidden;
+        background: #000;
+        color: var(--ink);
+        font-family: "SF Mono", "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
+      }
+
+      #stage {
+        position: fixed;
+        inset: 0;
+      }
+
+      .top-left {
+        position: fixed;
+        left: 176px;
+        top: 17px;
+        border: 1px solid var(--line);
+        padding: 6px 10px;
+        font-size: clamp(18px, 2vw, 33px);
+        line-height: 1;
+        pointer-events: none;
+      }
+
+      .top-line,
+      .bottom-line {
+        position: fixed;
+        left: 0;
+        width: 680px;
+        height: 1px;
+        background: var(--line);
+        pointer-events: none;
+      }
+
+      .top-line {
+        top: 100px;
+      }
+
+      .bottom-line {
+        bottom: 72px;
+      }
+
+      .title {
+        position: fixed;
+        right: 34px;
+        top: 10px;
+        text-align: right;
+        pointer-events: none;
+      }
+
+      .title small {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .title h1 {
+        margin: 0;
+        font-size: clamp(28px, 3.25vw, 58px);
+        font-weight: 500;
+        line-height: 0.94;
+        letter-spacing: 0;
+      }
+
+      .rail,
+      .credit {
+        position: fixed;
+        left: 27px;
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        font-size: 12px;
+        font-weight: 800;
+        pointer-events: none;
+      }
+
+      .rail {
+        top: 196px;
+      }
+
+      .credit {
+        bottom: 22px;
+      }
+
+      .callout {
+        position: fixed;
+        pointer-events: none;
+        color: var(--ink);
+      }
+
+      .callout .tag {
+        display: inline-block;
+        margin-bottom: 7px;
+        background: rgba(247, 247, 242, 0.72);
+        color: #fff;
+        padding: 5px 8px;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .callout .value {
+        display: block;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        padding: 10px 16px;
+        width: max-content;
+        max-width: 420px;
+        font-size: clamp(20px, 2vw, 34px);
+        line-height: 1.12;
+      }
+
+      .callout::before {
+        content: "";
+        position: absolute;
+        top: 20px;
+        height: 1px;
+        background: var(--line);
+      }
+
+      .callout::after {
+        content: "";
+        position: absolute;
+        top: 17px;
+        width: 6px;
+        height: 6px;
+        background: var(--ink);
+      }
+
+      .a {
+        left: 36%;
+        top: 58%;
+      }
+
+      .b {
+        right: 14%;
+        top: 61%;
+      }
+
+      .c {
+        left: 21%;
+        bottom: 8%;
+      }
+
+      .d {
+        right: 7%;
+        bottom: 5%;
+      }
+
+      .a::before,
+      .c::before {
+        left: 100%;
+        width: 165px;
+      }
+
+      .a::after,
+      .c::after {
+        left: calc(100% + 162px);
+      }
+
+      .b::before,
+      .d::before {
+        right: 100%;
+        width: 185px;
+      }
+
+      .b::after,
+      .d::after {
+        right: calc(100% + 182px);
+      }
+
+      .legend {
+        position: fixed;
+        left: 34px;
+        bottom: 24px;
+        width: min(620px, calc(100vw - 68px));
+        color: var(--soft);
+        font-size: 12px;
+        line-height: 1.45;
+        pointer-events: none;
+      }
+
+      .controls {
+        position: fixed;
+        right: 34px;
+        bottom: 28px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.55);
+        color: var(--ink);
+        padding: 9px 12px;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: rgba(247, 247, 242, 0.14);
+      }
+
+      #status {
+        position: fixed;
+        left: 34px;
+        bottom: 8px;
+        color: rgba(247, 247, 242, 0.5);
+        font-size: 12px;
+        pointer-events: none;
+      }
+
+      @media (max-width: 760px) {
+        .top-left {
+          left: 18px;
+          font-size: 18px;
+        }
+
+        .title {
+          right: 18px;
+          top: 70px;
+        }
+
+        .title h1 {
+          font-size: 28px;
+        }
+
+        .rail,
+        .credit,
+        .top-line,
+        .bottom-line,
+        .callout::before,
+        .callout::after,
+        .b,
+        .c {
+          display: none;
+        }
+
+        .a {
+          left: 18px;
+          top: auto;
+          bottom: 112px;
+        }
+
+        .d {
+          left: 18px;
+          right: auto;
+          bottom: 36px;
+        }
+
+        .legend {
+          display: none;
+        }
+
+        .controls {
+          right: 18px;
+          bottom: 18px;
+        }
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div class="top-line"></div>
+    <div class="bottom-line"></div>
+    <div class="top-left">AI DATA SCULPTURE</div>
+    <section class="title">
+      <small>VARNA ATMOSPHERIC DATA</small>
+      <h1>WEATHER<br />DATA UNIVERSE — BLACK SEA</h1>
+    </section>
+    <div class="rail">HUMIDITY × WIND × TEMPERATURE × PRESSURE × RAIN</div>
+    <div class="credit">OPEN-METEO × VARNA BG × 2015-2025</div>
+
+    <section class="callout a">
+      <span class="tag">MEDIUM</span>
+      <span class="value">INTERACTIVE<br />ATMOSPHERIC SCULPTURE</span>
+    </section>
+    <section class="callout b">
+      <span class="tag">DATA SOURCE</span>
+      <span class="value">OPEN-METEO ARCHIVE</span>
+    </section>
+    <section class="callout c">
+      <span class="tag">RESOLUTION</span>
+      <span class="value" id="count">LOADING READINGS</span>
+    </section>
+    <section class="callout d">
+      <span class="tag">DURATION</span>
+      <span class="value">11 YEARS LOOP</span>
+    </section>
+
+    <div class="legend">
+      Drag to rotate. Scroll or pinch to zoom. Each point is one hour in Varna.
+      Humidity controls density and glow; temperature controls color; wind bends the orbit;
+      pressure creates depth; rain becomes bright sparks.
+    </div>
+    <div class="controls">
+      <button id="pause">PAUSE</button>
+      <button id="reset">RESET VIEW</button>
+    </div>
+    <div id="status">Loading Varna weather archive...</div>
+
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+      const START = "2015-01-01";
+      const END = "2025-12-31";
+      const LATITUDE = 43.2141;
+      const LONGITUDE = 27.9147;
+      const url =
+        "https://archive-api.open-meteo.com/v1/archive" +
+        `?latitude=${LATITUDE}&longitude=${LONGITUDE}` +
+        `&start_date=${START}&end_date=${END}` +
+        "&hourly=temperature_2m,relative_humidity_2m,precipitation,surface_pressure,wind_speed_10m,wind_direction_10m" +
+        "&timezone=Europe%2FSofia";
+
+      const stage = document.getElementById("stage");
+      const statusEl = document.getElementById("status");
+      const countEl = document.getElementById("count");
+      const pauseButton = document.getElementById("pause");
+      const resetButton = document.getElementById("reset");
+
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x000000, 0.0025);
+
+      const camera = new THREE.PerspectiveCamera(54, innerWidth / innerHeight, 1, 5000);
+      camera.position.set(0, 30, 720);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+      stage.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.055;
+      controls.minDistance = 120;
+      controls.maxDistance = 1450;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.22;
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const palette = [
+        new THREE.Color("#3fe8ff"),
+        new THREE.Color("#6076ff"),
+        new THREE.Color("#d84cff"),
+        new THREE.Color("#ff4da6"),
+        new THREE.Color("#ffe55f"),
+        new THREE.Color("#ffffff"),
+      ];
+
+      let paused = false;
+
+      function normalize(value, min, max) {
+        if (!Number.isFinite(value)) return 0;
+        return Math.max(0, Math.min(1, (value - min) / (max - min)));
+      }
+
+      function dayOfYear(dateText) {
+        const date = new Date(`${dateText.slice(0, 10)}T00:00:00+02:00`);
+        const start = new Date(`${date.getFullYear()}-01-01T00:00:00+02:00`);
+        return Math.floor((date - start) / 86400000);
+      }
+
+      function makeSprite() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext("2d");
+        const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        gradient.addColorStop(0, "rgba(255,255,255,1)");
+        gradient.addColorStop(0.24, "rgba(255,255,255,0.9)");
+        gradient.addColorStop(0.62, "rgba(255,255,255,0.22)");
+        gradient.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 64, 64);
+        return new THREE.CanvasTexture(canvas);
+      }
+
+      function createGalaxy(data) {
+        const h = data.hourly;
+        const count = h.time.length;
+        const positions = new Float32Array(count * 3);
+        const colors = new Float32Array(count * 3);
+        const sizes = new Float32Array(count);
+        const linePositions = [];
+        const lineColors = [];
+
+        let tempMin = Infinity;
+        let tempMax = -Infinity;
+        let pressureMin = Infinity;
+        let pressureMax = -Infinity;
+        let windMax = 0;
+
+        for (let i = 0; i < count; i++) {
+          tempMin = Math.min(tempMin, h.temperature_2m[i]);
+          tempMax = Math.max(tempMax, h.temperature_2m[i]);
+          pressureMin = Math.min(pressureMin, h.surface_pressure[i]);
+          pressureMax = Math.max(pressureMax, h.surface_pressure[i]);
+          windMax = Math.max(windMax, h.wind_speed_10m[i]);
+        }
+
+        const yearStart = Number(START.slice(0, 4));
+        const yearSpan = Number(END.slice(0, 4)) - yearStart + 1;
+
+        for (let i = 0; i < count; i++) {
+          const dateText = h.time[i];
+          const year = Number(dateText.slice(0, 4));
+          const hour = Number(dateText.slice(11, 13));
+          const yearIndex = year - yearStart;
+          const annual = dayOfYear(dateText) / 366;
+          const humidity = h.relative_humidity_2m[i] / 100;
+          const rain = normalize(h.precipitation[i], 0, 5);
+          const temp = normalize(h.temperature_2m[i], tempMin, tempMax);
+          const pressure = normalize(h.surface_pressure[i], pressureMin, pressureMax);
+          const wind = normalize(h.wind_speed_10m[i], 0, windMax);
+          const windDir = (h.wind_direction_10m[i] * Math.PI) / 180;
+
+          const yearRadius = 82 + yearIndex * 15;
+          const seasonAngle = annual * Math.PI * 2 + yearIndex * 0.48;
+          const hourPulse = Math.sin((hour / 24) * Math.PI * 2) * 16;
+          const windBend = wind * 84;
+          const humidityPull = humidity * 120;
+          const radius = yearRadius + humidityPull + hourPulse + Math.sin(annual * Math.PI * 8) * 34;
+          const swirl = seasonAngle + wind * 1.8 + Math.sin(i * 0.0018) * 0.8;
+
+          const x = Math.cos(swirl) * radius + Math.cos(windDir) * windBend;
+          const y = Math.sin(swirl) * radius * 0.72 + Math.sin(windDir) * windBend;
+          const z =
+            (pressure - 0.5) * 430 +
+            Math.sin(annual * Math.PI * 2 + yearIndex) * 85 +
+            Math.cos(i * 0.003) * humidity * 70;
+
+          positions[i * 3] = x;
+          positions[i * 3 + 1] = y;
+          positions[i * 3 + 2] = z;
+
+          const low = temp < 0.5 ? palette[0].clone().lerp(palette[1], temp * 2) : palette[2].clone().lerp(palette[4], (temp - 0.5) * 2);
+          const color = rain > 0.12 ? low.lerp(palette[5], rain * 0.75) : low.lerp(palette[3], humidity * 0.38);
+          colors[i * 3] = color.r;
+          colors[i * 3 + 1] = color.g;
+          colors[i * 3 + 2] = color.b;
+
+          sizes[i] = 2.2 + humidity * 7 + rain * 13 + wind * 2;
+
+          if (i % 37 === 0) {
+            const endX = x + Math.cos(windDir) * (30 + wind * 90);
+            const endY = y + Math.sin(windDir) * (30 + wind * 90);
+            const endZ = z + (pressure - 0.5) * 50;
+            linePositions.push(x, y, z, endX, endY, endZ);
+            lineColors.push(color.r, color.g, color.b, color.r * 0.4, color.g * 0.4, color.b * 0.4);
+          }
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+        geometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+
+        const material = new THREE.PointsMaterial({
+          size: 4.5,
+          map: makeSprite(),
+          transparent: true,
+          opacity: 0.9,
+          vertexColors: true,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        });
+
+        const points = new THREE.Points(geometry, material);
+        group.add(points);
+
+        const lineGeometry = new THREE.BufferGeometry();
+        lineGeometry.setAttribute("position", new THREE.Float32BufferAttribute(linePositions, 3));
+        lineGeometry.setAttribute("color", new THREE.Float32BufferAttribute(lineColors, 3));
+        const lineMaterial = new THREE.LineBasicMaterial({
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.36,
+          blending: THREE.AdditiveBlending,
+        });
+        group.add(new THREE.LineSegments(lineGeometry, lineMaterial));
+
+        for (let i = 0; i < yearSpan; i++) {
+          const curve = new THREE.EllipseCurve(0, 0, 90 + i * 15, 64 + i * 11, 0, Math.PI * 2);
+          const points2d = curve.getPoints(180);
+          const ringGeometry = new THREE.BufferGeometry().setFromPoints(
+            points2d.map((p) => new THREE.Vector3(p.x, p.y, (i - yearSpan / 2) * 18))
+          );
+          const ringMaterial = new THREE.LineBasicMaterial({
+            color: i % 2 ? 0x835cff : 0x47e7ff,
+            transparent: true,
+            opacity: 0.08,
+          });
+          const ring = new THREE.LineLoop(ringGeometry, ringMaterial);
+          ring.rotation.x = 0.72;
+          ring.rotation.z = i * 0.11;
+          group.add(ring);
+        }
+
+        const meanHumidity =
+          h.relative_humidity_2m.reduce((sum, value) => sum + value, 0) / h.relative_humidity_2m.length;
+        countEl.textContent = `${count.toLocaleString()} HOURLY READINGS`;
+        statusEl.textContent = `Mean humidity ${Math.round(meanHumidity)}%. Drag, zoom, rotate.`;
+      }
+
+      async function load() {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          createGalaxy(await response.json());
+        } catch (error) {
+          console.error(error);
+          statusEl.textContent = "Could not load weather data.";
+        }
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (!paused) {
+          group.rotation.y += 0.0009;
+          group.rotation.z = Math.sin(performance.now() * 0.00008) * 0.08;
+        }
+        controls.update();
+        renderer.render(scene, camera);
+      }
+
+      pauseButton.addEventListener("click", () => {
+        paused = !paused;
+        controls.autoRotate = !paused;
+        pauseButton.textContent = paused ? "PLAY" : "PAUSE";
+      });
+
+      resetButton.addEventListener("click", () => {
+        camera.position.set(0, 30, 720);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      });
+
+      addEventListener("resize", () => {
+        camera.aspect = innerWidth / innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+      });
+
+      animate();
+      load();
+    </script>
+  </body>
+</html>
