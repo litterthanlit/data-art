@@ -5,14 +5,16 @@ Interactive atmospheric data sculpture generated from 11 years of hourly Varna w
 Open locally:
 
 ```sh
-python3 -m http.server 8765
+npm install
+npm run dev
 ```
 
 Then visit:
 
 ```text
-http://127.0.0.1:8765/projects/varna-weather-galaxy/
+http://127.0.0.1:5173/
 ```
 
 Data source: Open-Meteo Historical Weather API.
 
+The app ships with a bundled local weather cache at `public/data/varna-weather-2015-2025.json`.
