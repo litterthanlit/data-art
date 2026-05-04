@@ -234,9 +234,9 @@ elements.audioToggle.addEventListener("click", async () => {
   if (state.audioEnabled) {
     audio.stop();
     state.audioEnabled = false;
-    elements.audioToggle.textContent = "START SOUND";
+    elements.audioToggle.textContent = "START WEATHER";
     elements.audioToggle.classList.remove("is-active");
-    elements.status.textContent = "Sound stopped";
+    elements.status.textContent = "Weather audio stopped";
     return;
   }
 
@@ -245,12 +245,12 @@ elements.audioToggle.addEventListener("click", async () => {
     audio.setVolume(Number(elements.volumeRange.value) / 100);
     audio.setIntensity(state.intensity);
     state.audioEnabled = true;
-    elements.audioToggle.textContent = "STOP SOUND";
+    elements.audioToggle.textContent = "STOP WEATHER";
     elements.audioToggle.classList.add("is-active");
-    elements.status.textContent = "Sound active";
+    elements.status.textContent = "Weather audio active";
   } catch (error) {
     console.error(error);
-    elements.status.textContent = "Sound could not start";
+    elements.status.textContent = "Weather audio could not start";
   }
 });
 
