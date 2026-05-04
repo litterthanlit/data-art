@@ -293,41 +293,25 @@
     <div id="stage"></div>
     <div class="top-line"></div>
     <div class="bottom-line"></div>
-    <div class="top-left">AI DATA SCULPTURE</div>
+    <div class="top-left">DATA SCULPTURE</div>
     <section class="title">
-      <small>VARNA ATMOSPHERIC DATA</small>
-      <h1>WEATHER<br />DATA UNIVERSE — BLACK SEA</h1>
+      <small>VARNA</small>
+      <h1>WEATHER<br />GALAXY</h1>
     </section>
-    <div class="rail">HUMIDITY × WIND × TEMPERATURE × PRESSURE × RAIN</div>
-    <div class="credit">OPEN-METEO × VARNA BG × 2015-2025</div>
+    <div class="rail">2015-2025</div>
+    <div class="credit">OPEN-METEO</div>
 
-    <section class="callout a">
-      <span class="tag">MEDIUM</span>
-      <span class="value">INTERACTIVE<br />ATMOSPHERIC SCULPTURE</span>
-    </section>
-    <section class="callout b">
-      <span class="tag">DATA SOURCE</span>
-      <span class="value">OPEN-METEO ARCHIVE</span>
-    </section>
     <section class="callout c">
-      <span class="tag">RESOLUTION</span>
-      <span class="value" id="count">LOADING READINGS</span>
-    </section>
-    <section class="callout d">
-      <span class="tag">DURATION</span>
-      <span class="value">11 YEARS LOOP</span>
+      <span class="tag">HOURS</span>
+      <span class="value" id="count">LOADING</span>
     </section>
 
-    <div class="legend">
-      Drag to rotate. Scroll or pinch to zoom. Each point is one hour in Varna.
-      Humidity controls density and glow; temperature controls color; wind bends the orbit;
-      pressure creates depth; rain becomes bright sparks.
-    </div>
+    <div class="legend">Drag to rotate · Scroll to zoom</div>
     <div class="controls">
       <button id="pause">PAUSE</button>
-      <button id="reset">RESET VIEW</button>
+      <button id="reset">RESET</button>
     </div>
-    <div id="status">Loading Varna weather archive...</div>
+    <div id="status">Loading...</div>
 
     <script type="module">
       import * as THREE from "three";
@@ -532,8 +516,8 @@
 
         const meanHumidity =
           h.relative_humidity_2m.reduce((sum, value) => sum + value, 0) / h.relative_humidity_2m.length;
-        countEl.textContent = `${count.toLocaleString()} HOURLY READINGS`;
-        statusEl.textContent = `Mean humidity ${Math.round(meanHumidity)}%. Drag, zoom, rotate.`;
+        countEl.textContent = count.toLocaleString();
+        statusEl.textContent = `${Math.round(meanHumidity)}% mean humidity`;
       }
 
       async function load() {
