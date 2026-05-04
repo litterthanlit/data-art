@@ -18,6 +18,10 @@ const elements = {
   drawer: document.getElementById("drawer"),
   drawerToggle: document.getElementById("drawerToggle"),
   drawerClose: document.getElementById("drawerClose"),
+  aboutToggle: document.getElementById("aboutToggle"),
+  curatorPanel: document.getElementById("curatorPanel"),
+  curatorClose: document.getElementById("curatorClose"),
+  modeNote: document.getElementById("modeNote"),
   allYears: document.getElementById("allYears"),
   yearRange: document.getElementById("yearRange"),
   yearLabel: document.getElementById("yearLabel"),
@@ -50,6 +54,14 @@ const state = {
   selectedPoint: null,
 };
 
+const modeNotes = {
+  galaxy: "Complete atmospheric field",
+  storm: "Rain sparks, wind streaks, low thunder",
+  seasons: "Annual rings and seasonal color",
+  heat: "Temperature-weighted glow",
+  wind: "Directional bends and gusts",
+};
+
 const audio = new WeatherAudio();
 const scene = new WeatherScene({
   stage: elements.stage,
@@ -74,16 +86,25 @@ function formatTime(time) {
 }
 
 function formatDate(time) {
-  if (!time) return "Hover a point";
+  if (!time) return "Selected hour";
   const [date, hour] = time.split("T");
   return `${date} ${hour}`;
 }
 
-function setDrawer(open) {
+function setDrawer(open, closeCurator = true) {
   elements.drawer.classList.toggle("is-open", open);
   elements.drawerToggle.classList.toggle("is-hidden", open);
   elements.drawerToggle.setAttribute("aria-expanded", String(open));
   document.body.classList.toggle("has-open-drawer", open);
+  if (open && closeCurator) setCurator(false, false);
+}
+
+function setCurator(open, closeDrawer = true) {
+  elements.curatorPanel.classList.toggle("is-open", open);
+  elements.aboutToggle.classList.toggle("is-hidden", open);
+  elements.aboutToggle.setAttribute("aria-expanded", String(open));
+  document.body.classList.toggle("has-open-curator", open);
+  if (open && closeDrawer) setDrawer(false, false);
 }
 
 function setSegmentedValue(group, value) {
@@ -98,6 +119,7 @@ function updateReadouts() {
   elements.timeLabel.textContent = formatTime(scene.currentReading()?.time);
   elements.volumeLabel.textContent = `${elements.volumeRange.value}%`;
   elements.intensityLabel.textContent = `${elements.intensityRange.value}%`;
+  elements.modeNote.textContent = modeNotes[state.mode] ?? modeNotes.galaxy;
   document.body.dataset.mode = state.mode;
 }
 
@@ -129,7 +151,7 @@ function updateStatus(data) {
   const meanHumidity = Math.round(
     data.hourly.humidity.reduce((sum, value) => sum + value, 0) / data.hourly.humidity.length
   );
-  elements.status.textContent = `${meanHumidity}% mean humidity · Click field for pulse`;
+  elements.status.textContent = `${meanHumidity}% mean humidity · ${data.meta.count.toLocaleString()} hours`;
 }
 
 function countTo(target, duration = 1650) {
@@ -163,7 +185,7 @@ async function playOpening(count) {
   document.body.classList.remove("is-loading");
   document.body.classList.add("is-ready");
   elements.intro.classList.add("is-complete");
-  elements.status.textContent = "Field ready · Click for pulse";
+  elements.status.textContent = "Field ready";
 
   setTimeout(() => {
     elements.intro.hidden = true;
@@ -189,7 +211,7 @@ for (const group of document.querySelectorAll(".segmented")) {
 
     if (group.dataset.control === "mode") {
       state.mode = value;
-      elements.status.textContent = `${titleCase(value)} mode`;
+      elements.status.textContent = modeNotes[value] ?? `${titleCase(value)} mode`;
     }
 
     if (group.dataset.control === "focus") {
@@ -203,6 +225,8 @@ for (const group of document.querySelectorAll(".segmented")) {
 
 elements.drawerToggle.addEventListener("click", () => setDrawer(true));
 elements.drawerClose.addEventListener("click", () => setDrawer(false));
+elements.aboutToggle.addEventListener("click", () => setCurator(true));
+elements.curatorClose.addEventListener("click", () => setCurator(false));
 
 elements.allYears.addEventListener("change", () => {
   state.allYears = elements.allYears.checked;
@@ -268,7 +292,10 @@ elements.reset.addEventListener("click", () => {
 
 addEventListener("keydown", (event) => {
   if (event.key.toLowerCase() === "g") setDrawer(!elements.drawer.classList.contains("is-open"));
-  if (event.key === "Escape") setDrawer(false);
+  if (event.key === "Escape") {
+    setDrawer(false);
+    setCurator(false);
+  }
 });
 
 async function init() {

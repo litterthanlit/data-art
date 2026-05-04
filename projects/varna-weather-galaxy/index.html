@@ -10,7 +10,7 @@
     <title>Varna Weather Galaxy</title>
   </head>
   <body>
-    <main id="app" aria-label="Varna Weather Galaxy playground">
+    <main id="app" aria-label="Varna Weather Galaxy exhibition">
       <div id="stage" aria-hidden="true"></div>
 
       <section id="intro" class="intro" aria-live="polite">
@@ -42,7 +42,7 @@
       <div class="rail rail-source">OPEN-METEO</div>
 
       <section id="inspector" class="inspector" aria-live="polite">
-        <span id="inspectorDate">Hover a point</span>
+        <span id="inspectorDate">Selected hour</span>
         <dl>
           <div><dt>Humidity</dt><dd id="inspectHumidity">--</dd></div>
           <div><dt>Temp</dt><dd id="inspectTemp">--</dd></div>
@@ -53,22 +53,25 @@
       </section>
 
       <p id="status" class="status">Loading local weather archive...</p>
-      <p id="interactionHint" class="interaction-hint">Drag the field · Open Playground · Start Weather</p>
+      <p id="interactionHint" class="interaction-hint">2015-2025 archive · tactile field · weather audio</p>
 
       <button id="drawerToggle" class="drawer-tab" type="button" aria-controls="drawer" aria-expanded="false">
-        PLAYGROUND
+        EXHIBITION
+      </button>
+      <button id="aboutToggle" class="about-tab" type="button" aria-controls="curatorPanel" aria-expanded="false">
+        ABOUT
       </button>
 
-      <aside id="drawer" class="drawer" aria-label="Playground controls">
+      <aside id="drawer" class="drawer" aria-label="Exhibition controls">
         <div class="drawer-head">
           <div class="project-title">
-            <span>PROJECT</span>
-            <strong>Weather Galaxy</strong>
-            <p>Varna / Open-Meteo archive</p>
+            <span>EXHIBITION</span>
+            <strong>Varna Weather Galaxy</strong>
+            <p>96,432 hourly readings</p>
           </div>
           <div class="deploy-status" aria-label="Live dataset status">
             <span aria-hidden="true"></span>
-            Live
+            Archive
           </div>
           <button id="drawerClose" class="icon-button" type="button" aria-label="Close controls">×</button>
         </div>
@@ -82,6 +85,7 @@
             <button type="button" data-value="heat">Heat</button>
             <button type="button" data-value="wind">Wind</button>
           </div>
+          <p id="modeNote" class="mode-note">Complete atmospheric field</p>
         </section>
 
         <section class="control-block">
@@ -132,6 +136,24 @@
           <button id="pause" type="button">PAUSE</button>
           <button id="reset" type="button">RESET</button>
         </footer>
+      </aside>
+
+      <aside id="curatorPanel" class="curator-panel" aria-label="Artwork notes">
+        <div class="curator-head">
+          <span>CURATOR NOTE</span>
+          <button id="curatorClose" class="icon-button" type="button" aria-label="Close artwork notes">×</button>
+        </div>
+        <h2>Varna weather, rendered as atmosphere.</h2>
+        <p>
+          Every point is one recorded hour. Humidity pulls the field outward, pressure gives it depth,
+          rain sharpens the sparks, and wind bends the archive into motion.
+        </p>
+        <dl class="curator-meta">
+          <div><dt>Place</dt><dd>Varna, Bulgaria</dd></div>
+          <div><dt>Archive</dt><dd>2015-2025</dd></div>
+          <div><dt>Source</dt><dd>Open-Meteo</dd></div>
+          <div><dt>Medium</dt><dd>Three.js + Web Audio</dd></div>
+        </dl>
       </aside>
     </main>
 

@@ -2,6 +2,9 @@ export class WeatherAudio {
   constructor() {
     this.context = null;
     this.master = null;
+    this.droneOsc = null;
+    this.droneFilter = null;
+    this.droneGain = null;
     this.windSource = null;
     this.windFilter = null;
     this.windGain = null;
@@ -46,6 +49,22 @@ export class WeatherAudio {
     this.master = this.context.createGain();
     this.master.gain.value = 0;
     this.master.connect(this.context.destination);
+
+    this.droneFilter = this.context.createBiquadFilter();
+    this.droneFilter.type = "lowpass";
+    this.droneFilter.frequency.value = 420;
+    this.droneFilter.Q.value = 0.5;
+
+    this.droneGain = this.context.createGain();
+    this.droneGain.gain.value = 0;
+    this.droneFilter.connect(this.droneGain);
+    this.droneGain.connect(this.master);
+
+    this.droneOsc = this.context.createOscillator();
+    this.droneOsc.type = "sine";
+    this.droneOsc.frequency.value = 72;
+    this.droneOsc.connect(this.droneFilter);
+    this.droneOsc.start();
 
     this.windFilter = this.context.createBiquadFilter();
     this.windFilter.type = "lowpass";
@@ -120,6 +139,10 @@ export class WeatherAudio {
     const windSignal = Math.max(wind, humidity * 0.12, stormMode ? 0.16 : 0);
     const stormBoost = stormMode ? 1.9 : 1;
     const windBoost = windMode ? 1.35 : 1;
+
+    this.droneOsc.frequency.setTargetAtTime(52 + humidity * 26 + temperature * 22, now, 0.42);
+    this.droneFilter.frequency.setTargetAtTime(240 + humidity * 520 + temperature * 280, now, 0.46);
+    this.droneGain.gain.setTargetAtTime((0.006 + humidity * 0.046) * intensity, now, 0.5);
 
     this.windFilter.frequency.setTargetAtTime(160 + windSignal * 1250 + temperature * 160, now, 0.35);
     this.windFilter.Q.setTargetAtTime(0.45 + windSignal * 1.8, now, 0.35);

@@ -7,6 +7,15 @@ const YEAR_COUNT = END_YEAR - START_YEAR + 1;
 const MAX_PIXEL_RATIO = 3;
 const CAMERA_HOME = new THREE.Vector3(0, 54, 980);
 const MODE_TRANSITION_MS = 1800;
+const MIST_COUNT = 1200;
+
+const ATMOSPHERES = {
+  galaxy: { fog: 0.00155, mist: 0.045, lines: 0.18, rotate: 0.22 },
+  storm: { fog: 0.00225, mist: 0.085, lines: 0.34, rotate: 0.32 },
+  seasons: { fog: 0.00142, mist: 0.052, lines: 0.2, rotate: 0.2 },
+  heat: { fog: 0.00132, mist: 0.035, lines: 0.16, rotate: 0.18 },
+  wind: { fog: 0.00172, mist: 0.068, lines: 0.36, rotate: 0.28 },
+};
 
 const PALETTES = {
   cold: new THREE.Color("#8fc9d3"),
@@ -17,6 +26,11 @@ const PALETTES = {
   white: new THREE.Color("#e8e4dc"),
   wind: new THREE.Color("#aaa4c7"),
 };
+
+function seeded(index) {
+  const value = Math.sin(index * 12.9898) * 43758.5453;
+  return value - Math.floor(value);
+}
 
 function normalizeDateProgress(time) {
   const date = new Date(`${time}:00+02:00`);
@@ -127,6 +141,10 @@ export class WeatherScene {
     this.group = new THREE.Group();
     this.scene.add(this.group);
 
+    this.mist = this.createMistLayer();
+    this.scene.add(this.mist);
+    this.updateAtmosphere();
+
     this.raycaster = new THREE.Raycaster();
     this.raycaster.params.Points.threshold = 14;
     this.pointer = new THREE.Vector2();
@@ -167,6 +185,80 @@ export class WeatherScene {
     marker.add(ring, dot);
     marker.visible = false;
     return marker;
+  }
+
+  createMistLayer() {
+    const positions = new Float32Array(MIST_COUNT * 3);
+    const colors = new Float32Array(MIST_COUNT * 3);
+    const sizes = new Float32Array(MIST_COUNT);
+    const alphas = new Float32Array(MIST_COUNT);
+
+    for (let i = 0; i < MIST_COUNT; i++) {
+      const angle = seeded(i + 11) * Math.PI * 2;
+      const depth = seeded(i + 101) * Math.PI * 2;
+      const radius = 360 + seeded(i + 211) * 940;
+      const vertical = (seeded(i + 307) - 0.5) * 720;
+      const color = PALETTES.cold.clone().lerp(PALETTES.white, seeded(i + 401) * 0.38);
+      const p = i * 3;
+
+      positions[p] = Math.cos(angle) * radius * (0.72 + seeded(i + 503) * 0.46);
+      positions[p + 1] = vertical + Math.sin(depth) * 120;
+      positions[p + 2] = Math.sin(angle) * radius + Math.cos(depth) * 320;
+      colors[p] = color.r;
+      colors[p + 1] = color.g;
+      colors[p + 2] = color.b;
+      sizes[i] = 18 + seeded(i + 607) * 34;
+      alphas[i] = 0.24 + seeded(i + 701) * 0.58;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+    geometry.setAttribute("alpha", new THREE.BufferAttribute(alphas, 1));
+
+    this.mistMaterial = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        pixelRatio: { value: Math.min(devicePixelRatio, MAX_PIXEL_RATIO) },
+        opacity: { value: 0.04 },
+      },
+      vertexShader: `
+        uniform float pixelRatio;
+        attribute float size;
+        attribute float alpha;
+        varying vec3 vColor;
+        varying float vAlpha;
+
+        void main() {
+          vColor = color;
+          vAlpha = alpha;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = size * pixelRatio * (520.0 / max(260.0, -mvPosition.z));
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform float opacity;
+        varying vec3 vColor;
+        varying float vAlpha;
+
+        void main() {
+          vec2 center = gl_PointCoord - vec2(0.5);
+          float dist = length(center);
+          if (dist > 0.5) discard;
+          float veil = smoothstep(0.5, 0.02, dist);
+          gl_FragColor = vec4(vColor, veil * vAlpha * opacity);
+        }
+      `,
+    });
+
+    const mist = new THREE.Points(geometry, this.mistMaterial);
+    mist.renderOrder = -1;
+    return mist;
   }
 
   pointMaterial() {
@@ -325,9 +417,9 @@ export class WeatherScene {
         points2d.map((p) => new THREE.Vector3(p.x, p.y, (i - YEAR_COUNT / 2) * 28))
       );
       const ringMaterial = new THREE.LineBasicMaterial({
-        color: i % 2 ? 0x835cff : 0x47e7ff,
+        color: i % 2 ? 0x7c768f : 0x789ca0,
         transparent: true,
-        opacity: 0.08,
+        opacity: 0.065,
       });
       const ring = new THREE.LineLoop(ringGeometry, ringMaterial);
       ring.rotation.x = 0.72;
@@ -338,12 +430,23 @@ export class WeatherScene {
     }
   }
 
+  updateAtmosphere() {
+    const atmosphere = ATMOSPHERES[this.state.mode] ?? ATMOSPHERES.galaxy;
+    const intensityLift = 0.84 + this.state.intensity * 0.28;
+    this.scene.fog.density = atmosphere.fog * intensityLift;
+    this.controls.autoRotateSpeed = atmosphere.rotate;
+    if (this.mistMaterial) {
+      this.mistMaterial.uniforms.opacity.value = atmosphere.mist * intensityLift;
+    }
+  }
+
   setState(patch) {
     if (patch.mode && patch.mode !== this.state.mode) {
       this.startModeTransition(patch.mode);
     }
 
     this.state = { ...this.state, ...patch };
+    this.updateAtmosphere();
     this.updateAppearance();
     this.updateCurrentIndex();
     this.updateRings();
@@ -494,7 +597,7 @@ export class WeatherScene {
     attributes.color.needsUpdate = true;
     attributes.size.needsUpdate = true;
     attributes.alpha.needsUpdate = true;
-    this.lineMaterial.opacity = mode === "wind" ? 0.36 : mode === "storm" ? 0.34 : 0.2;
+    this.lineMaterial.opacity = (ATMOSPHERES[mode] ?? ATMOSPHERES.galaxy).lines;
   }
 
   updateCurrentIndex() {
@@ -598,6 +701,11 @@ export class WeatherScene {
       const speed = this.state.mode === "storm" ? 0.0016 : this.state.mode === "wind" ? 0.0013 : 0.0009;
       this.group.rotation.y += speed;
       this.group.rotation.z = Math.sin(performance.now() * 0.00008) * 0.08;
+      if (this.mist) {
+        const mistSpeed = this.state.mode === "wind" ? 0.00022 : this.state.mode === "storm" ? 0.00018 : 0.00009;
+        this.mist.rotation.y -= mistSpeed;
+        this.mist.rotation.x = Math.sin(performance.now() * 0.00005) * 0.055;
+      }
     }
 
     this.marker.lookAt(this.camera.position);
@@ -612,5 +720,6 @@ export class WeatherScene {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
     this.renderer.setSize(innerWidth, innerHeight);
     if (this.points) this.points.material.uniforms.pixelRatio.value = Math.min(devicePixelRatio, MAX_PIXEL_RATIO);
+    if (this.mistMaterial) this.mistMaterial.uniforms.pixelRatio.value = Math.min(devicePixelRatio, MAX_PIXEL_RATIO);
   }
 }
