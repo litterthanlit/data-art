@@ -8,13 +8,13 @@ const MAX_PIXEL_RATIO = 3;
 const CAMERA_HOME = new THREE.Vector3(0, 54, 980);
 
 const PALETTES = {
-  cold: new THREE.Color("#38e9ff"),
-  cool: new THREE.Color("#6778ff"),
-  violet: new THREE.Color("#d84cff"),
-  hot: new THREE.Color("#ff5b8a"),
-  gold: new THREE.Color("#ffe66d"),
-  white: new THREE.Color("#ffffff"),
-  wind: new THREE.Color("#8f80ff"),
+  cold: new THREE.Color("#8fc9d3"),
+  cool: new THREE.Color("#8b96bf"),
+  violet: new THREE.Color("#a590b3"),
+  hot: new THREE.Color("#c58f9a"),
+  gold: new THREE.Color("#c9b982"),
+  white: new THREE.Color("#e8e4dc"),
+  wind: new THREE.Color("#aaa4c7"),
 };
 
 function normalizeDateProgress(time) {
@@ -29,7 +29,7 @@ function colorFromTemperature(tempNorm, humidityNorm, rainNorm) {
     tempNorm < 0.5
       ? PALETTES.cold.clone().lerp(PALETTES.cool, tempNorm * 2)
       : PALETTES.violet.clone().lerp(PALETTES.gold, (tempNorm - 0.5) * 2);
-  return rainNorm > 0.12 ? low.lerp(PALETTES.white, rainNorm * 0.75) : low.lerp(PALETTES.hot, humidityNorm * 0.38);
+  return rainNorm > 0.12 ? low.lerp(PALETTES.white, rainNorm * 0.48) : low.lerp(PALETTES.hot, humidityNorm * 0.24);
 }
 
 function colorForMode(mode, values, season) {
@@ -40,10 +40,10 @@ function colorForMode(mode, values, season) {
   }
 
   if (mode === "seasons") {
-    const spring = new THREE.Color("#76ffcf");
-    const summer = new THREE.Color("#ffe66d");
-    const autumn = new THREE.Color("#ff6e54");
-    const winter = new THREE.Color("#55d9ff");
+    const spring = new THREE.Color("#9bc9b6");
+    const summer = new THREE.Color("#c9b982");
+    const autumn = new THREE.Color("#c19682");
+    const winter = new THREE.Color("#8fc9d3");
     if (season < 0.25) return winter.lerp(spring, season / 0.25);
     if (season < 0.5) return spring.lerp(summer, (season - 0.25) / 0.25);
     if (season < 0.75) return summer.lerp(autumn, (season - 0.5) / 0.25);
@@ -55,10 +55,10 @@ function colorForMode(mode, values, season) {
   }
 
   if (mode === "wind") {
-    return PALETTES.cold.clone().lerp(PALETTES.wind, wind).lerp(PALETTES.white, wind * 0.24);
+    return PALETTES.cold.clone().lerp(PALETTES.wind, wind).lerp(PALETTES.white, wind * 0.12);
   }
 
-  return colorFromTemperature(temperature, humidity, rain).lerp(PALETTES.white, pressure * 0.08);
+  return colorFromTemperature(temperature, humidity, rain).lerp(PALETTES.white, pressure * 0.04);
 }
 
 function nearestIndexForProgress(indices, progress, progresses) {
@@ -202,7 +202,7 @@ export class WeatherScene {
           float halo = smoothstep(0.5, 0.04, dist);
           float core = smoothstep(0.15, 0.0, dist);
           float edge = smoothstep(0.5, 0.46, dist);
-          gl_FragColor = vec4(vColor + core * 0.42, (halo * 0.72 + core * 0.35 + edge * 0.08) * vAlpha);
+          gl_FragColor = vec4(vColor + core * 0.2, (halo * 0.56 + core * 0.25 + edge * 0.05) * vAlpha);
         }
       `,
     });
@@ -397,21 +397,21 @@ export class WeatherScene {
 
       const temporalDistance = sameYear ? Math.abs(this.metrics.progress[i] - timeProgress) : 1;
       const temporalBoost = sameYear ? Math.exp(-Math.pow(temporalDistance * 28, 2)) : 0;
-      const baseAlpha = yearVisible ? 0.38 : 0.055;
-      let alpha = baseAlpha + focus * 0.5 + temporalBoost * 0.7;
+      const baseAlpha = yearVisible ? 0.3 : 0.04;
+      let alpha = baseAlpha + focus * 0.38 + temporalBoost * 0.55;
       let size = 1.7 + values.humidity * 3.8 + values.rain * 11 + values.wind * 2.6 + focus * 6.2 * intensity;
 
       if (mode === "storm") {
-        alpha += values.rain * 0.7 + values.wind * 0.2;
+        alpha += values.rain * 0.5 + values.wind * 0.14;
         size += values.rain * 15 + values.wind * 4;
       } else if (mode === "seasons") {
-        alpha += sameYear ? 0.2 : 0.02;
+        alpha += sameYear ? 0.14 : 0.02;
         size += temporalBoost * 9;
       } else if (mode === "heat") {
-        alpha += values.temperature * 0.45;
+        alpha += values.temperature * 0.32;
         size += values.temperature * 10;
       } else if (mode === "wind") {
-        alpha += values.wind * 0.55;
+        alpha += values.wind * 0.38;
         size += values.wind * 13;
       }
 
@@ -440,7 +440,7 @@ export class WeatherScene {
     attributes.color.needsUpdate = true;
     attributes.size.needsUpdate = true;
     attributes.alpha.needsUpdate = true;
-    this.lineMaterial.opacity = mode === "wind" ? 0.54 : mode === "storm" ? 0.48 : 0.28;
+    this.lineMaterial.opacity = mode === "wind" ? 0.36 : mode === "storm" ? 0.34 : 0.2;
   }
 
   updateCurrentIndex() {
