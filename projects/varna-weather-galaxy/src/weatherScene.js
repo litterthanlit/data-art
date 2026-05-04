@@ -4,6 +4,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 const START_YEAR = 2015;
 const END_YEAR = 2025;
 const YEAR_COUNT = END_YEAR - START_YEAR + 1;
+const MAX_PIXEL_RATIO = 3;
+const CAMERA_HOME = new THREE.Vector3(0, 54, 980);
 
 const PALETTES = {
   cold: new THREE.Color("#38e9ff"),
@@ -102,21 +104,21 @@ export class WeatherScene {
     };
 
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x000000, 0.0026);
+    this.scene.fog = new THREE.FogExp2(0x000000, 0.0017);
 
     this.camera = new THREE.PerspectiveCamera(54, innerWidth / innerHeight, 1, 5000);
-    this.camera.position.set(0, 36, 720);
+    this.camera.position.copy(CAMERA_HOME);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
     this.renderer.setSize(innerWidth, innerHeight);
     this.stage.appendChild(this.renderer.domElement);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.055;
-    this.controls.minDistance = 120;
-    this.controls.maxDistance = 1450;
+    this.controls.minDistance = 220;
+    this.controls.maxDistance = 2100;
     this.controls.autoRotate = true;
     this.controls.autoRotateSpeed = 0.22;
 
@@ -124,7 +126,7 @@ export class WeatherScene {
     this.scene.add(this.group);
 
     this.raycaster = new THREE.Raycaster();
-    this.raycaster.params.Points.threshold = 9;
+    this.raycaster.params.Points.threshold = 14;
     this.pointer = new THREE.Vector2();
     this.pointerDirty = false;
 
@@ -172,7 +174,7 @@ export class WeatherScene {
       vertexColors: true,
       blending: THREE.AdditiveBlending,
       uniforms: {
-        pixelRatio: { value: Math.min(devicePixelRatio, 2) },
+        pixelRatio: { value: Math.min(devicePixelRatio, MAX_PIXEL_RATIO) },
       },
       vertexShader: `
         uniform float pixelRatio;
@@ -185,7 +187,7 @@ export class WeatherScene {
           vColor = color;
           vAlpha = alpha;
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = size * pixelRatio * (360.0 / max(120.0, -mvPosition.z));
+          gl_PointSize = size * pixelRatio * (440.0 / max(160.0, -mvPosition.z));
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
@@ -196,9 +198,11 @@ export class WeatherScene {
         void main() {
           vec2 center = gl_PointCoord - vec2(0.5);
           float dist = length(center);
-          float glow = smoothstep(0.5, 0.0, dist);
-          float core = smoothstep(0.18, 0.0, dist);
-          gl_FragColor = vec4(vColor + core * 0.28, glow * vAlpha);
+          if (dist > 0.5) discard;
+          float halo = smoothstep(0.5, 0.04, dist);
+          float core = smoothstep(0.15, 0.0, dist);
+          float edge = smoothstep(0.5, 0.46, dist);
+          gl_FragColor = vec4(vColor + core * 0.42, (halo * 0.72 + core * 0.35 + edge * 0.08) * vAlpha);
         }
       `,
     });
@@ -261,20 +265,20 @@ export class WeatherScene {
       if (!this.yearIndices.has(year)) this.yearIndices.set(year, []);
       this.yearIndices.get(year).push(i);
 
-      const yearRadius = 82 + yearIndex * 15;
+      const yearRadius = 118 + yearIndex * 24;
       const seasonAngle = progress * Math.PI * 2 + yearIndex * 0.48;
-      const hourPulse = Math.sin((hour / 24) * Math.PI * 2) * 16;
-      const windBend = wind * 84;
-      const humidityPull = humidity * 120;
-      const radius = yearRadius + humidityPull + hourPulse + Math.sin(progress * Math.PI * 8) * 34;
+      const hourPulse = Math.sin((hour / 24) * Math.PI * 2) * 22;
+      const windBend = wind * 128;
+      const humidityPull = humidity * 172;
+      const radius = yearRadius + humidityPull + hourPulse + Math.sin(progress * Math.PI * 8) * 52;
       const swirl = seasonAngle + wind * 1.8 + Math.sin(i * 0.0018) * 0.8;
 
       const x = Math.cos(swirl) * radius + Math.cos(windDirection) * windBend;
-      const y = Math.sin(swirl) * radius * 0.72 + Math.sin(windDirection) * windBend;
+      const y = Math.sin(swirl) * radius * 0.78 + Math.sin(windDirection) * windBend;
       const z =
-        (pressure - 0.5) * 430 +
-        Math.sin(progress * Math.PI * 2 + yearIndex) * 85 +
-        Math.cos(i * 0.003) * humidity * 70;
+        (pressure - 0.5) * 620 +
+        Math.sin(progress * Math.PI * 2 + yearIndex) * 135 +
+        Math.cos(i * 0.003) * humidity * 118;
 
       this.basePositions[i * 3] = x;
       this.basePositions[i * 3 + 1] = y;
@@ -282,9 +286,9 @@ export class WeatherScene {
 
       if (i % 37 === 0) {
         const color = colorFromTemperature(temperature, humidity, rain);
-        const endX = x + Math.cos(windDirection) * (30 + wind * 90);
-        const endY = y + Math.sin(windDirection) * (30 + wind * 90);
-        const endZ = z + (pressure - 0.5) * 50;
+        const endX = x + Math.cos(windDirection) * (46 + wind * 128);
+        const endY = y + Math.sin(windDirection) * (46 + wind * 128);
+        const endZ = z + (pressure - 0.5) * 72;
         linePositions.push(x, y, z, endX, endY, endZ);
         lineColors.push(color.r, color.g, color.b, color.r * 0.4, color.g * 0.4, color.b * 0.4);
       }
@@ -313,10 +317,10 @@ export class WeatherScene {
 
     this.rings = [];
     for (let i = 0; i < YEAR_COUNT; i++) {
-      const curve = new THREE.EllipseCurve(0, 0, 90 + i * 15, 64 + i * 11, 0, Math.PI * 2);
+      const curve = new THREE.EllipseCurve(0, 0, 126 + i * 24, 90 + i * 17, 0, Math.PI * 2);
       const points2d = curve.getPoints(180);
       const ringGeometry = new THREE.BufferGeometry().setFromPoints(
-        points2d.map((p) => new THREE.Vector3(p.x, p.y, (i - YEAR_COUNT / 2) * 18))
+        points2d.map((p) => new THREE.Vector3(p.x, p.y, (i - YEAR_COUNT / 2) * 28))
       );
       const ringMaterial = new THREE.LineBasicMaterial({
         color: i % 2 ? 0x835cff : 0x47e7ff,
@@ -346,7 +350,7 @@ export class WeatherScene {
   }
 
   resetView() {
-    this.camera.position.set(0, 36, 720);
+    this.camera.position.copy(CAMERA_HOME);
     this.controls.target.set(0, 0, 0);
     this.group.rotation.set(0, 0, 0);
     this.controls.update();
@@ -383,9 +387,9 @@ export class WeatherScene {
       const baseX = this.basePositions[p];
       const baseY = this.basePositions[p + 1];
       const baseZ = this.basePositions[p + 2];
-      const windPush = mode === "wind" ? 48 : mode === "storm" ? 34 : 0;
-      const heatLift = mode === "heat" ? (values.temperature - 0.5) * 120 : 0;
-      const stormLift = mode === "storm" ? (values.rain * 130 + values.wind * 42) : 0;
+      const windPush = mode === "wind" ? 72 : mode === "storm" ? 52 : 0;
+      const heatLift = mode === "heat" ? (values.temperature - 0.5) * 168 : 0;
+      const stormLift = mode === "storm" ? values.rain * 184 + values.wind * 58 : 0;
 
       this.positions[p] = baseX + Math.cos(this.metrics.windDirection[i]) * values.wind * windPush;
       this.positions[p + 1] = baseY + Math.sin(this.metrics.windDirection[i]) * values.wind * windPush;
@@ -395,11 +399,11 @@ export class WeatherScene {
       const temporalBoost = sameYear ? Math.exp(-Math.pow(temporalDistance * 28, 2)) : 0;
       const baseAlpha = yearVisible ? 0.38 : 0.055;
       let alpha = baseAlpha + focus * 0.5 + temporalBoost * 0.7;
-      let size = 2.2 + values.humidity * 4.5 + values.rain * 13 + values.wind * 3 + focus * 7 * intensity;
+      let size = 1.7 + values.humidity * 3.8 + values.rain * 11 + values.wind * 2.6 + focus * 6.2 * intensity;
 
       if (mode === "storm") {
         alpha += values.rain * 0.7 + values.wind * 0.2;
-        size += values.rain * 18 + values.wind * 5;
+        size += values.rain * 15 + values.wind * 4;
       } else if (mode === "seasons") {
         alpha += sameYear ? 0.2 : 0.02;
         size += temporalBoost * 9;
@@ -549,8 +553,8 @@ export class WeatherScene {
   resize() {
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
     this.renderer.setSize(innerWidth, innerHeight);
-    if (this.points) this.points.material.uniforms.pixelRatio.value = Math.min(devicePixelRatio, 2);
+    if (this.points) this.points.material.uniforms.pixelRatio.value = Math.min(devicePixelRatio, MAX_PIXEL_RATIO);
   }
 }
