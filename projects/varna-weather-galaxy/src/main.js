@@ -3,9 +3,15 @@ import { WeatherAudio } from "./weatherAudio.js";
 import { WeatherScene } from "./weatherScene.js";
 
 const DATA_URL = `${import.meta.env.BASE_URL}data/varna-weather-2015-2025.json`;
+const prefersReducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+document.body.classList.add("is-loading");
 
 const elements = {
   stage: document.getElementById("stage"),
+  intro: document.getElementById("intro"),
+  introCount: document.getElementById("introCount"),
+  interactionHint: document.getElementById("interactionHint"),
   count: document.getElementById("count"),
   focusReadout: document.getElementById("focusReadout"),
   status: document.getElementById("status"),
@@ -77,6 +83,7 @@ function setDrawer(open) {
   elements.drawer.classList.toggle("is-open", open);
   elements.drawerToggle.classList.toggle("is-hidden", open);
   elements.drawerToggle.setAttribute("aria-expanded", String(open));
+  document.body.classList.toggle("has-open-drawer", open);
 }
 
 function setSegmentedValue(group, value) {
@@ -123,6 +130,48 @@ function updateStatus(data) {
     data.hourly.humidity.reduce((sum, value) => sum + value, 0) / data.hourly.humidity.length
   );
   elements.status.textContent = `${meanHumidity}% mean humidity · Click field for pulse`;
+}
+
+function countTo(target, duration = 1650) {
+  if (prefersReducedMotion) {
+    elements.introCount.textContent = target.toLocaleString();
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    const start = performance.now();
+
+    function frame(now) {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      elements.introCount.textContent = Math.round(target * eased).toLocaleString();
+
+      if (progress < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        resolve();
+      }
+    }
+
+    requestAnimationFrame(frame);
+  });
+}
+
+async function playOpening(count) {
+  elements.status.textContent = "Preparing field...";
+  await countTo(count);
+  document.body.classList.remove("is-loading");
+  document.body.classList.add("is-ready");
+  elements.intro.classList.add("is-complete");
+  elements.status.textContent = "Field ready · Click for pulse";
+
+  setTimeout(() => {
+    elements.intro.hidden = true;
+  }, prefersReducedMotion ? 0 : 700);
+
+  setTimeout(() => {
+    elements.interactionHint.classList.add("is-faded");
+  }, prefersReducedMotion ? 1800 : 8500);
 }
 
 async function loadData() {
@@ -225,12 +274,16 @@ addEventListener("keydown", (event) => {
 async function init() {
   try {
     const data = await loadData();
-    elements.count.textContent = data.meta.count.toLocaleString();
     scene.setData(data);
+    elements.count.textContent = data.meta.count.toLocaleString();
     updateStatus(data);
     applySceneState();
+    await playOpening(data.meta.count);
   } catch (error) {
     console.error(error);
+    document.body.classList.remove("is-loading");
+    document.body.classList.add("is-ready");
+    elements.intro.classList.add("is-complete");
     elements.count.textContent = "FAILED";
     elements.status.textContent = "Could not load local weather archive.";
   }

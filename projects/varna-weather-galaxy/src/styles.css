@@ -102,11 +102,74 @@ button {
 .metrics,
 .rail,
 .status,
+.interaction-hint,
 .inspector,
 .drawer,
 .drawer-tab {
   position: fixed;
   z-index: 2;
+}
+
+.chrome,
+.metrics,
+.rail,
+.status,
+.interaction-hint,
+.drawer-tab {
+  transition: opacity 520ms ease, transform 520ms ease;
+}
+
+body.is-loading .chrome,
+body.is-loading .metrics,
+body.is-loading .rail,
+body.is-loading .status,
+body.is-loading .interaction-hint,
+body.is-loading .drawer-tab {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  background:
+    radial-gradient(circle at 50% 52%, rgba(143, 201, 211, 0.12), transparent 32%),
+    rgba(0, 0, 0, 0.78);
+  color: var(--ink);
+  text-align: center;
+  transition: opacity 640ms ease, transform 640ms ease, visibility 640ms ease;
+}
+
+.intro.is-complete {
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(1.018);
+}
+
+.intro span {
+  color: var(--quiet);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.intro strong {
+  display: block;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: clamp(44px, 7vw, 104px);
+  font-weight: 400;
+  line-height: 0.94;
+  font-variant-numeric: tabular-nums;
+}
+
+.intro p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .chrome-top {
@@ -213,6 +276,27 @@ button {
   color: var(--quiet);
   font-size: 12px;
   pointer-events: none;
+}
+
+.interaction-hint {
+  left: 50%;
+  bottom: 28px;
+  margin: 0;
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.72);
+  backdrop-filter: blur(16px);
+  padding: 7px 11px;
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.interaction-hint.is-faded,
+body.has-open-drawer .interaction-hint {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
 }
 
 .inspector {
@@ -538,6 +622,22 @@ button:focus-visible {
   .status {
     left: 18px;
     bottom: 42px;
+  }
+
+  .interaction-hint {
+    left: 18px;
+    right: auto;
+    bottom: 18px;
+    transform: none;
+    max-width: calc(100vw - 124px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .interaction-hint.is-faded,
+  body.has-open-drawer .interaction-hint {
+    transform: translateY(8px);
   }
 
   .inspector {

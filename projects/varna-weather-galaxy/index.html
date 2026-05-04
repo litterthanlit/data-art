@@ -13,6 +13,12 @@
     <main id="app" aria-label="Varna Weather Galaxy playground">
       <div id="stage" aria-hidden="true"></div>
 
+      <section id="intro" class="intro" aria-live="polite">
+        <span>VARNA WEATHER GALAXY</span>
+        <strong id="introCount">0</strong>
+        <p>hourly readings</p>
+      </section>
+
       <header class="chrome chrome-top">
         <div class="mark">DATA SCULPTURE</div>
         <section class="title" aria-label="Artwork title">
@@ -47,6 +53,7 @@
       </section>
 
       <p id="status" class="status">Loading local weather archive...</p>
+      <p id="interactionHint" class="interaction-hint">Drag the field · Open Playground · Start Sound</p>
 
       <button id="drawerToggle" class="drawer-tab" type="button" aria-controls="drawer" aria-expanded="false">
         PLAYGROUND

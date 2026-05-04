@@ -6,6 +6,7 @@ const END_YEAR = 2025;
 const YEAR_COUNT = END_YEAR - START_YEAR + 1;
 const MAX_PIXEL_RATIO = 3;
 const CAMERA_HOME = new THREE.Vector3(0, 54, 980);
+const MODE_TRANSITION_MS = 1800;
 
 const PALETTES = {
   cold: new THREE.Color("#8fc9d3"),
@@ -90,6 +91,7 @@ export class WeatherScene {
     this.metrics = null;
     this.yearIndices = new Map();
     this.pulses = [];
+    this.modeTransition = null;
     this.selectedIndex = null;
     this.currentIndex = 0;
     this.paused = false;
@@ -337,11 +339,31 @@ export class WeatherScene {
   }
 
   setState(patch) {
+    if (patch.mode && patch.mode !== this.state.mode) {
+      this.startModeTransition(patch.mode);
+    }
+
     this.state = { ...this.state, ...patch };
     this.updateAppearance();
     this.updateCurrentIndex();
     this.updateRings();
     this.updateMarker();
+  }
+
+  startModeTransition(mode) {
+    const now = performance.now();
+    this.modeTransition = {
+      mode,
+      started: now,
+      duration: MODE_TRANSITION_MS,
+    };
+
+    this.pulses.push({
+      started: now,
+      duration: mode === "storm" ? 1800 : 1450,
+      strength: mode === "storm" ? 1.35 : 0.95,
+      origin: new THREE.Vector3(0, 0, 0),
+    });
   }
 
   setPaused(paused) {
@@ -369,8 +391,16 @@ export class WeatherScene {
     if (!this.data || !this.points) return;
     const { mode, allYears, selectedYear, timeProgress, intensity } = this.state;
     const pulseNow = performance.now();
-    const activePulses = includePulse ? this.pulses.filter((pulse) => pulseNow - pulse.started < 1350) : [];
+    const activePulses = includePulse
+      ? this.pulses.filter((pulse) => pulseNow - pulse.started < (pulse.duration ?? 1350))
+      : [];
+    const transitionAge = this.modeTransition
+      ? (pulseNow - this.modeTransition.started) / this.modeTransition.duration
+      : 1;
+    const transitionActive = transitionAge < 1;
+
     if (includePulse) this.pulses = activePulses;
+    if (this.modeTransition && !transitionActive) this.modeTransition = null;
 
     for (let i = 0; i < this.count; i++) {
       const p = i * 3;
@@ -397,9 +427,33 @@ export class WeatherScene {
 
       const temporalDistance = sameYear ? Math.abs(this.metrics.progress[i] - timeProgress) : 1;
       const temporalBoost = sameYear ? Math.exp(-Math.pow(temporalDistance * 28, 2)) : 0;
+      let transitionBand = 0;
+
+      if (transitionActive) {
+        const waveDistance = Math.abs(this.metrics.progress[i] - transitionAge);
+        const wrappedDistance = Math.min(waveDistance, 1 - waveDistance);
+        transitionBand = Math.exp(-Math.pow(wrappedDistance / 0.055, 2)) * (1 - transitionAge * 0.18);
+        this.positions[p + 2] += transitionBand * (mode === "storm" ? 112 : 66);
+
+        if (mode === "wind") {
+          this.positions[p] += Math.cos(this.metrics.windDirection[i]) * transitionBand * 96;
+          this.positions[p + 1] += Math.sin(this.metrics.windDirection[i]) * transitionBand * 96;
+        }
+
+        if (mode === "heat") {
+          this.positions[p + 2] += values.temperature * transitionBand * 88;
+        }
+      }
+
       const baseAlpha = yearVisible ? 0.3 : 0.04;
-      let alpha = baseAlpha + focus * 0.38 + temporalBoost * 0.55;
-      let size = 1.7 + values.humidity * 3.8 + values.rain * 11 + values.wind * 2.6 + focus * 6.2 * intensity;
+      let alpha = baseAlpha + focus * 0.38 + temporalBoost * 0.55 + transitionBand * (mode === "storm" ? 0.68 : 0.42);
+      let size =
+        1.7 +
+        values.humidity * 3.8 +
+        values.rain * 11 +
+        values.wind * 2.6 +
+        focus * 6.2 * intensity +
+        transitionBand * (mode === "storm" ? 18 : 12);
 
       if (mode === "storm") {
         alpha += values.rain * 0.5 + values.wind * 0.14;
@@ -416,15 +470,15 @@ export class WeatherScene {
       }
 
       for (const pulse of activePulses) {
-        const age = (pulseNow - pulse.started) / 1350;
-        const radius = age * 560;
+        const age = (pulseNow - pulse.started) / (pulse.duration ?? 1350);
+        const radius = age * 620;
         const dx = this.positions[p] - pulse.origin.x;
         const dy = this.positions[p + 1] - pulse.origin.y;
         const dz = this.positions[p + 2] - pulse.origin.z;
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
         const band = Math.exp(-Math.pow((distance - radius) / 58, 2)) * (1 - age);
-        alpha += band * 1.2;
-        size += band * 28;
+        alpha += band * 1.2 * (pulse.strength ?? 1);
+        size += band * 28 * (pulse.strength ?? 1);
       }
 
       const color = colorForMode(mode, values, this.metrics.progress[i]);
@@ -480,6 +534,8 @@ export class WeatherScene {
     const p = pulseIndex * 3;
     this.pulses.push({
       started: performance.now(),
+      duration: 1350,
+      strength: 1,
       origin: new THREE.Vector3(this.positions[p], this.positions[p + 1], this.positions[p + 2]),
     });
     if (index != null) this.selectIndex(index);
@@ -533,7 +589,7 @@ export class WeatherScene {
       if (index != null) this.selectIndex(index);
     }
 
-    if (this.pulses.length) {
+    if (this.pulses.length || this.modeTransition) {
       this.updateAppearance(true);
       this.updateMarker();
     }
