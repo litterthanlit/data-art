@@ -215,48 +215,51 @@ body.is-loading .about-tab {
 
 .title span {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   color: var(--muted);
+  opacity: 0.72;
 }
 
 .title h1 {
   margin: 0;
-  font-size: clamp(28px, 3.15vw, 52px);
+  font-size: clamp(22px, 2.35vw, 38px);
   font-weight: 400;
-  line-height: 0.98;
+  line-height: 1.08;
   letter-spacing: 0;
+  opacity: 0.82;
 }
 
 .metrics {
-  left: 28px;
-  bottom: 72px;
+  left: 24px;
+  bottom: 58px;
   display: flex;
-  gap: 10px;
+  gap: 6px;
   align-items: flex-end;
   pointer-events: none;
-  opacity: 0.84;
+  opacity: 0.66;
 }
 
 .metrics div {
-  min-width: 116px;
+  min-width: 84px;
   border: 1px solid var(--line);
   background: var(--panel);
   border-radius: 8px;
   backdrop-filter: blur(14px);
-  padding: 10px 12px 12px;
+  padding: 7px 9px 8px;
 }
 
 .metrics span {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
+  font-size: 10px;
 }
 
 .metrics strong {
   display: block;
   font-family: "Geist Mono", ui-monospace, monospace;
-  font-size: clamp(20px, 2.5vw, 36px);
+  font-size: clamp(13px, 1.05vw, 18px);
   font-weight: 500;
-  line-height: 0.95;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
@@ -273,17 +276,22 @@ body.is-loading .about-tab {
 }
 
 .rail-source {
-  bottom: 24px;
+  left: 24px;
+  bottom: 14px;
+  writing-mode: horizontal-tb;
+  transform: none;
+  font-size: 10px;
+  opacity: 0.42;
 }
 
 .status {
-  left: 28px;
-  bottom: 42px;
+  left: 24px;
+  bottom: 34px;
   margin: 0;
   color: var(--quiet);
-  font-size: 12px;
+  font-size: 11px;
   pointer-events: none;
-  opacity: 0.78;
+  opacity: 0.64;
 }
 
 .interaction-hint {
@@ -707,28 +715,36 @@ button:focus-visible {
   }
 
   .title h1 {
-    font-size: 32px;
+    font-size: 25px;
   }
 
   .rail {
     display: none;
   }
 
+  .rail-source {
+    left: 16px;
+    bottom: 14px;
+    display: block;
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+
   .metrics {
-    left: 18px;
-    right: 18px;
-    bottom: 72px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    left: 16px;
+    right: auto;
+    bottom: 54px;
+    display: flex;
+    gap: 6px;
   }
 
   .metrics div {
-    min-width: 0;
+    min-width: 82px;
   }
 
   .status {
-    left: 18px;
-    bottom: 42px;
+    left: 16px;
+    bottom: 32px;
   }
 
   .interaction-hint {
