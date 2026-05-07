@@ -36,7 +36,7 @@ export class FlowField {
     this.trailMaterial = new THREE.LineBasicMaterial({
       vertexColors: true,
       transparent: true,
-      opacity: 0.72,
+      opacity: 0.88,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
@@ -96,7 +96,7 @@ export class FlowField {
         edge,
         offset: (particleIndex / count + edgeIndex * 0.137) % 1,
         speed: 0.28 + edge.intensity * 0.62,
-        length: 0.018 + edge.intensity * 0.032,
+        length: 0.04 + edge.intensity * 0.06,
       }));
     });
   }
