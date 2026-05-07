@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { FlowField } from "../particles/FlowField.js";
 
 export const CATEGORY_COLORS = {
   general: 0x9be7ff,
@@ -20,6 +21,13 @@ export class TradeScene {
     this.clock = new THREE.Clock();
     this.animationId = null;
     this.paused = false;
+    this.flowField = null;
+    this.layerState = {
+      general: true,
+      energy: true,
+      food: true,
+      manufacturing: true,
+    };
 
     this.nodes = new THREE.Group();
     this.edges = new THREE.Group();
@@ -45,6 +53,7 @@ export class TradeScene {
   }
 
   load(network) {
+    this.disposeFlowField();
     this.clearGroup(this.nodes);
     this.clearGroup(this.edges);
 
@@ -83,6 +92,9 @@ export class TradeScene {
       this.nodes.add(mesh);
     }
 
+    this.flowField = new FlowField(network.edges);
+    this.edges.add(this.flowField.object);
+
     this.render();
   }
 
@@ -102,6 +114,7 @@ export class TradeScene {
       this.organism.rotation.x = Math.sin(this.clock.elapsedTime * 0.22) * 0.08;
     }
 
+    this.flowField?.update(delta, this.layerState);
     this.render();
   }
 
@@ -123,6 +136,7 @@ export class TradeScene {
     }
 
     window.removeEventListener("resize", this.handleResize);
+    this.disposeFlowField();
     this.clearGroup(this.nodes);
     this.clearGroup(this.edges);
     this.renderer.dispose();
@@ -154,5 +168,15 @@ export class TradeScene {
         child.material?.dispose();
       }
     }
+  }
+
+  disposeFlowField() {
+    if (!this.flowField) {
+      return;
+    }
+
+    this.flowField.object.removeFromParent();
+    this.flowField.dispose();
+    this.flowField = null;
   }
 }
