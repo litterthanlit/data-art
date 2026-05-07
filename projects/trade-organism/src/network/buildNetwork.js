@@ -19,6 +19,18 @@ export function buildNetwork(data) {
     const source = nodeMap.get(edge.source);
     const target = nodeMap.get(edge.target);
     const choke = chokepoints.get(edge.chokepoint);
+    const missing = [
+      !source && `source "${edge.source}"`,
+      !target && `target "${edge.target}"`,
+      !choke && `chokepoint "${edge.chokepoint}"`,
+    ].filter(Boolean);
+
+    if (missing.length > 0) {
+      throw new Error(
+        `Edge "${edge.id}" has missing reference: ${missing.join(", ")}`
+      );
+    }
+
     const mid = source.position.clone().lerp(target.position, 0.5);
     const control = mid.lerp(choke.position, 0.42 + choke.pressure * 0.18);
     const curve = new THREE.CatmullRomCurve3([
