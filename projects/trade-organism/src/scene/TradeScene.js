@@ -9,19 +9,25 @@ export const CATEGORY_COLORS = {
 };
 
 export class TradeScene {
-  constructor({ stage }) {
+  constructor({ stage, onHover = () => {} }) {
     if (!stage) {
       throw new Error("Scene stage is missing");
     }
 
     this.stage = stage;
+    this.onHover = onHover;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    this.raycaster = new THREE.Raycaster();
+    this.pointer = new THREE.Vector2();
+    this.pointerClient = null;
     this.clock = new THREE.Clock();
     this.animationId = null;
     this.paused = false;
+    this.hoveredItem = null;
     this.flowField = null;
+    this.edgeHitSamples = [];
     this.layerState = {
       general: true,
       energy: true,
@@ -47,8 +53,18 @@ export class TradeScene {
 
     this.resetView();
     this.handleResize = this.handleResize.bind(this);
+    this.handlePointerMove = this.handlePointerMove.bind(this);
+    this.handlePointerLeave = this.handlePointerLeave.bind(this);
     this.animate = this.animate.bind(this);
     window.addEventListener("resize", this.handleResize);
+    this.renderer.domElement.addEventListener(
+      "pointermove",
+      this.handlePointerMove
+    );
+    this.renderer.domElement.addEventListener(
+      "pointerleave",
+      this.handlePointerLeave
+    );
     this.handleResize();
   }
 
@@ -56,22 +72,28 @@ export class TradeScene {
     this.disposeFlowField();
     this.clearGroup(this.nodes);
     this.clearGroup(this.edges);
+    this.edgeHitSamples = [];
 
     for (const edge of network.edges) {
       const color = CATEGORY_COLORS[edge.category] ?? CATEGORY_COLORS.general;
+      const baseOpacity = 0.34 + edge.intensity * 0.36;
       const geometry = new THREE.BufferGeometry().setFromPoints(
         edge.curve.getPoints(44)
       );
       const material = new THREE.LineBasicMaterial({
         color,
         transparent: true,
-        opacity: 0.34 + edge.intensity * 0.36,
+        opacity: baseOpacity,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
       const line = new THREE.Line(geometry, material);
-      line.userData = { kind: "edge", item: edge };
+      line.userData = { kind: "edge", item: edge, baseOpacity };
       this.edges.add(line);
+
+      this.edgeHitSamples.push(
+        ...edge.curve.getPoints(36).map((point) => ({ edge, point }))
+      );
     }
 
     for (const node of network.nodes) {
@@ -88,13 +110,14 @@ export class TradeScene {
       });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.copy(node.position);
-      mesh.userData = { kind: "node", item: node };
+      mesh.userData = { kind: "node", item: node, baseOpacity: 0.88 };
       this.nodes.add(mesh);
     }
 
     this.flowField = new FlowField(network.edges);
     this.edges.add(this.flowField.object);
 
+    this.setLayers(this.layerState);
     this.render();
   }
 
@@ -115,11 +138,36 @@ export class TradeScene {
     }
 
     this.flowField?.update(this.paused ? 0 : delta, this.layerState);
+    this.updateHover();
     this.render();
   }
 
   setPaused(value) {
     this.paused = Boolean(value);
+  }
+
+  setLayers(layers) {
+    this.layerState = { ...this.layerState, ...layers };
+
+    for (const line of this.edges.children) {
+      if (line.userData.kind !== "edge") {
+        continue;
+      }
+
+      const category = line.userData.item.category;
+      const enabled = this.layerState[category] !== false;
+      line.material.opacity = enabled ? line.userData.baseOpacity : 0.04;
+    }
+
+    for (const mesh of this.nodes.children) {
+      const category = mesh.userData.item.category;
+      const enabled = this.layerState[category] !== false;
+      mesh.material.opacity = enabled ? mesh.userData.baseOpacity : 0.14;
+    }
+
+    this.flowField?.update(0, this.layerState);
+    this.updateHover();
+    this.render();
   }
 
   resetView() {
@@ -136,9 +184,18 @@ export class TradeScene {
     }
 
     window.removeEventListener("resize", this.handleResize);
+    this.renderer.domElement.removeEventListener(
+      "pointermove",
+      this.handlePointerMove
+    );
+    this.renderer.domElement.removeEventListener(
+      "pointerleave",
+      this.handlePointerLeave
+    );
     this.disposeFlowField();
     this.clearGroup(this.nodes);
     this.clearGroup(this.edges);
+    this.edgeHitSamples = [];
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -151,6 +208,101 @@ export class TradeScene {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
     this.render();
+  }
+
+  handlePointerMove(event) {
+    const bounds = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+    this.pointer.y = -(((event.clientY - bounds.top) / bounds.height) * 2 - 1);
+    this.pointerClient = {
+      x: event.clientX - bounds.left,
+      y: event.clientY - bounds.top,
+      width: bounds.width,
+      height: bounds.height,
+    };
+    this.updateHover();
+  }
+
+  handlePointerLeave() {
+    this.pointerClient = null;
+    this.setHoveredItem(null);
+  }
+
+  updateHover() {
+    if (!this.pointerClient) {
+      return;
+    }
+
+    this.organism.updateMatrixWorld(true);
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+
+    const nodeHits = this.raycaster
+      .intersectObjects(this.nodes.children, false)
+      .filter((hit) => {
+        const category = hit.object.userData.item.category;
+        return this.layerState[category] !== false;
+      });
+
+    if (nodeHits.length > 0) {
+      this.setHoveredItem({
+        kind: "node",
+        value: nodeHits[0].object.userData.item,
+      });
+      return;
+    }
+
+    const edgeHit = this.findNearestEdgeSample();
+    this.setHoveredItem(edgeHit ? { kind: "edge", value: edgeHit.edge } : null);
+  }
+
+  findNearestEdgeSample() {
+    const threshold = 14;
+    const projected = new THREE.Vector3();
+    const worldPoint = new THREE.Vector3();
+    let nearest = null;
+    let nearestDistance = threshold;
+
+    for (const sample of this.edgeHitSamples) {
+      if (this.layerState[sample.edge.category] === false) {
+        continue;
+      }
+
+      worldPoint.copy(sample.point);
+      this.organism.localToWorld(worldPoint);
+      projected.copy(worldPoint).project(this.camera);
+
+      if (projected.z < -1 || projected.z > 1) {
+        continue;
+      }
+
+      const x = ((projected.x + 1) / 2) * this.pointerClient.width;
+      const y = ((-projected.y + 1) / 2) * this.pointerClient.height;
+      const distance = Math.hypot(
+        x - this.pointerClient.x,
+        y - this.pointerClient.y
+      );
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = sample;
+      }
+    }
+
+    return nearest;
+  }
+
+  setHoveredItem(item) {
+    const currentKind = this.hoveredItem?.kind;
+    const currentId = this.hoveredItem?.value.id;
+    const nextKind = item?.kind;
+    const nextId = item?.value.id;
+
+    if (currentKind === nextKind && currentId === nextId) {
+      return;
+    }
+
+    this.hoveredItem = item;
+    this.onHover(item);
   }
 
   render() {

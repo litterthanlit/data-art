@@ -1,8 +1,13 @@
 import "./styles.css";
 import { buildNetwork } from "./network/buildNetwork.js";
 import { TradeScene } from "./scene/TradeScene.js";
+import { formatEdge, formatNode } from "./ui/readouts.js";
 
 const DATA_URL = `${import.meta.env.BASE_URL}data/trade-organism.json`;
+const state = {
+  paused: false,
+  layers: { general: true, energy: true, food: true, manufacturing: true },
+};
 
 let activeScene = null;
 let cleanupControls = () => {};
@@ -16,9 +21,14 @@ async function boot() {
   cleanupControls();
   activeScene?.dispose();
 
-  const scene = new TradeScene({ stage: document.getElementById("stage") });
+  const scene = new TradeScene({
+    stage: document.getElementById("stage"),
+    onHover: updateInspector,
+  });
   activeScene = scene;
   scene.load(network);
+  scene.setPaused(state.paused);
+  scene.setLayers(state.layers);
   cleanupControls = wireControls(scene);
   scene.start();
   document.getElementById("status").textContent =
@@ -28,16 +38,16 @@ async function boot() {
 function wireControls(scene) {
   const pauseButton = document.getElementById("pause");
   const resetButton = document.getElementById("reset");
-  let paused = false;
+  const layerInputs = [...document.querySelectorAll("[data-layer]")];
 
   const updatePauseState = () => {
-    scene.setPaused(paused);
-    pauseButton.textContent = paused ? "Resume" : "Pause";
-    pauseButton.setAttribute("aria-pressed", String(paused));
+    scene.setPaused(state.paused);
+    pauseButton.textContent = state.paused ? "Resume" : "Pause";
+    pauseButton.setAttribute("aria-pressed", String(state.paused));
   };
 
   const handlePause = () => {
-    paused = !paused;
+    state.paused = !state.paused;
     updatePauseState();
   };
 
@@ -45,14 +55,40 @@ function wireControls(scene) {
     scene.resetView();
   };
 
+  const handleLayerChange = (event) => {
+    const layer = event.target.dataset.layer;
+    state.layers[layer] = event.target.checked;
+    scene.setLayers(state.layers);
+  };
+
   pauseButton.addEventListener("click", handlePause);
   resetButton.addEventListener("click", handleReset);
+  layerInputs.forEach((input) => {
+    input.checked = state.layers[input.dataset.layer] !== false;
+    input.addEventListener("change", handleLayerChange);
+  });
+
   updatePauseState();
+  scene.setLayers(state.layers);
 
   return () => {
     pauseButton.removeEventListener("click", handlePause);
     resetButton.removeEventListener("click", handleReset);
+    layerInputs.forEach((input) => {
+      input.removeEventListener("change", handleLayerChange);
+    });
   };
+}
+
+function updateInspector(item) {
+  const inspector = document.getElementById("inspector");
+  if (!item) {
+    inspector.textContent = "Hover a hub or flow";
+    return;
+  }
+
+  inspector.textContent =
+    item.kind === "node" ? formatNode(item.value) : formatEdge(item.value);
 }
 
 boot().catch((error) => {
