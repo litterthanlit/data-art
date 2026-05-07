@@ -46,10 +46,10 @@ export class FlowField {
     );
 
     this.material = new THREE.PointsMaterial({
-      size: 0.16,
+      size: 0.2,
       vertexColors: true,
       transparent: true,
-      opacity: 0.95,
+      opacity: 1,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
@@ -57,7 +57,7 @@ export class FlowField {
     this.trailMaterial = new THREE.LineBasicMaterial({
       vertexColors: true,
       transparent: true,
-      opacity: 0.72,
+      opacity: 0.9,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
@@ -124,12 +124,12 @@ export class FlowField {
 
   createParticles(edges) {
     return edges.flatMap((edge, edgeIndex) => {
-      const count = Math.max(5, Math.ceil(edge.intensity * 20));
+      const count = Math.max(6, Math.ceil(edge.intensity * 24));
       return Array.from({ length: count }, (_, particleIndex) => ({
         edge,
         offset: (particleIndex / count + edgeIndex * 0.137) % 1,
-        speed: 0.28 + edge.intensity * 0.62,
-        length: 0.018 + edge.intensity * 0.032,
+        speed: 0.42 + edge.intensity * 0.88,
+        length: 0.028 + edge.intensity * 0.05,
       }));
     });
   }
