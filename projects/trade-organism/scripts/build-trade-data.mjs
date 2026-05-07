@@ -27,7 +27,7 @@ const hubs = [
   ["belgium", "Belgium", 14000000]
 ];
 
-const nodes = hubs.map(([id, name, teu], index) => ({
+const anchorNodes = hubs.map(([id, name, teu], index) => ({
   id,
   name,
   type: "hub",
@@ -35,6 +35,24 @@ const nodes = hubs.map(([id, name, teu], index) => ({
   weight: Math.sqrt(teu) / Math.sqrt(275000000),
   category: categories[index % categories.length]
 }));
+
+const satelliteNodes = hubs.flatMap(([hubId, hubName, hubTeu], hubIndex) =>
+  Array.from({ length: 19 }, (_, index) => {
+    const ordinal = index + 1;
+    const teu = Math.round(hubTeu * (0.03 + ((ordinal % 7) + 1) * 0.006));
+    return {
+      id: `${hubId}-flow-${String(ordinal).padStart(2, "0")}`,
+      name: `${hubName} flow ${ordinal}`,
+      type: "flow",
+      parent: hubId,
+      teu,
+      weight: Math.sqrt(teu) / Math.sqrt(275000000),
+      category: categories[(hubIndex + ordinal) % categories.length]
+    };
+  })
+);
+
+const nodes = [...anchorNodes, ...satelliteNodes];
 
 const edges = nodes.flatMap((source, sourceIndex) =>
   nodes.slice(sourceIndex + 1, sourceIndex + 5).map((target, offset) => ({
@@ -50,8 +68,8 @@ const edges = nodes.flatMap((source, sourceIndex) =>
 const data = {
   meta: {
     title: "Trade Organism",
-    sourceNote: "Static illustrative cache for the artwork; values are curated approximations and are not live fetched data.",
-    generatedAt: "2026-05-07-cache-v1"
+    sourceNote: "Static illustrative cache for the artwork. The structure is curated from public supply-chain references and scaled from container-traffic patterns; it is not live fetched data or a literal logistics dataset.",
+    generatedAt: "2026-05-07-cache-v2"
   },
   categories,
   chokepoints,
