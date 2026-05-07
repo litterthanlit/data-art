@@ -50,8 +50,8 @@ const edges = nodes.flatMap((source, sourceIndex) =>
 const data = {
   meta: {
     title: "Trade Organism",
-    sourceNote: "Container traffic values are based on public World Bank-style TEU scale; bundled JSON is the stable artwork cache.",
-    generatedAt: new Date().toISOString()
+    sourceNote: "Static illustrative cache for the artwork; values are curated approximations and are not live fetched data.",
+    generatedAt: "2026-05-07-cache-v1"
   },
   categories,
   chokepoints,
