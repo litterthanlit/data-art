@@ -1,5 +1,6 @@
 import "./styles.css";
 import { buildNetwork } from "./network/buildNetwork.js";
+import { TradeScene } from "./scene/TradeScene.js";
 
 const DATA_URL = `${import.meta.env.BASE_URL}data/trade-organism.json`;
 
@@ -8,6 +9,9 @@ async function boot() {
   if (!response.ok) throw new Error(`Data load failed: ${response.status}`);
   const data = await response.json();
   const network = buildNetwork(data);
+  const scene = new TradeScene({ stage: document.getElementById("stage") });
+  scene.load(network);
+  scene.start();
   document.getElementById("status").textContent =
     `${network.nodes.length.toLocaleString()} hubs · ${network.edges.length.toLocaleString()} flows`;
 }
