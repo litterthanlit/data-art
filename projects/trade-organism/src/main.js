@@ -11,12 +11,23 @@ const state = {
 
 let activeScene = null;
 let cleanupControls = () => {};
+let bootRun = 0;
+let bootController = null;
 
 async function boot() {
-  const response = await fetch(DATA_URL);
+  const runId = ++bootRun;
+  bootController = new AbortController();
+  const { signal } = bootController;
+
+  const isStale = () => signal.aborted || runId !== bootRun;
+
+  const response = await fetch(DATA_URL, { signal });
+  if (isStale()) return;
   if (!response.ok) throw new Error(`Data load failed: ${response.status}`);
   const data = await response.json();
+  if (isStale()) return;
   const network = buildNetwork(data);
+  if (isStale()) return;
 
   cleanupControls();
   activeScene?.dispose();
@@ -92,12 +103,18 @@ function updateInspector(item) {
 }
 
 boot().catch((error) => {
+  if (error.name === "AbortError") {
+    return;
+  }
+
   document.body.classList.add("has-error");
   document.getElementById("status").textContent = error.message;
 });
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
+    bootRun += 1;
+    bootController?.abort();
     cleanupControls();
     activeScene?.dispose();
     activeScene = null;
