@@ -182,13 +182,15 @@ export class TradeScene {
 
       const category = line.userData.item.category;
       const enabled = this.layerState[category] !== false;
-      line.material.opacity = enabled ? line.userData.baseOpacity : 0.04;
+      line.visible = enabled;
+      line.material.opacity = line.userData.baseOpacity;
     }
 
     for (const mesh of this.nodes.children) {
       const category = mesh.userData.item.category;
       const enabled = this.layerState[category] !== false;
-      mesh.material.opacity = enabled ? mesh.userData.baseOpacity : 0.14;
+      mesh.visible = enabled;
+      mesh.material.opacity = mesh.userData.baseOpacity;
     }
 
     this.flowField?.update(0, this.layerState);
