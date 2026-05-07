@@ -125,6 +125,7 @@ export class TradeScene {
     this.flowField = new FlowField(network.edges);
     this.edges.add(this.flowField.object);
 
+    this.centerNetwork(network);
     this.setLayers(this.layerState);
     this.render();
   }
@@ -188,6 +189,22 @@ export class TradeScene {
     this.camera.lookAt(0, 0, 0);
     this.applyRotation();
     this.render();
+  }
+
+  centerNetwork(network) {
+    const bounds = new THREE.Box3();
+
+    for (const node of network.nodes) {
+      bounds.expandByPoint(node.position);
+    }
+
+    if (bounds.isEmpty()) {
+      this.organism.position.set(0, 0, 0);
+      return;
+    }
+
+    const center = bounds.getCenter(new THREE.Vector3());
+    this.organism.position.copy(center).multiplyScalar(-1);
   }
 
   dispose() {
