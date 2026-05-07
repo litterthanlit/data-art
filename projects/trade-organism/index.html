@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Trade Organism, an interactive Three.js data artwork of global trade flows."
+    />
+    <title>Trade Organism</title>
+  </head>
+  <body>
+    <main id="app" aria-label="Trade Organism">
+      <div id="stage" aria-hidden="true"></div>
+
+      <header class="title">
+        <h1>Trade Organism</h1>
+        <p id="status" aria-live="polite">Loading</p>
+      </header>
+
+      <section class="controls" aria-label="Controls">
+        <button id="pause" type="button">Pause</button>
+        <button id="reset" type="button">Reset</button>
+
+        <fieldset class="layers">
+          <legend>Layers</legend>
+          <label>
+            <input type="checkbox" name="layer" value="general" checked />
+            General
+          </label>
+          <label>
+            <input type="checkbox" name="layer" value="energy" checked />
+            Energy
+          </label>
+          <label>
+            <input type="checkbox" name="layer" value="food" checked />
+            Food
+          </label>
+          <label>
+            <input type="checkbox" name="layer" value="manufacturing" checked />
+            Manufacturing
+          </label>
+        </fieldset>
+
+        <label class="time-control" for="time">
+          <span>Time</span>
+          <input id="time" type="range" min="0" max="100" value="0" />
+        </label>
+      </section>
+
+      <aside id="inspector" class="inspector" aria-live="polite">
+        Select a flow
+      </aside>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
