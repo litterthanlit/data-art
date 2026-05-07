@@ -1,0 +1,449 @@
+{
+  "meta": {
+    "title": "Trade Organism",
+    "sourceNote": "Container traffic values are based on public World Bank-style TEU scale; bundled JSON is the stable artwork cache.",
+    "generatedAt": "2026-05-07T18:50:29.067Z"
+  },
+  "categories": [
+    "general",
+    "energy",
+    "food",
+    "manufacturing"
+  ],
+  "chokepoints": [
+    {
+      "id": "suez",
+      "name": "Suez",
+      "pressure": 0.92
+    },
+    {
+      "id": "panama",
+      "name": "Panama",
+      "pressure": 0.76
+    },
+    {
+      "id": "malacca",
+      "name": "Malacca",
+      "pressure": 0.96
+    },
+    {
+      "id": "hormuz",
+      "name": "Hormuz",
+      "pressure": 0.88
+    },
+    {
+      "id": "gibraltar",
+      "name": "Gibraltar",
+      "pressure": 0.64
+    },
+    {
+      "id": "singapore",
+      "name": "Singapore",
+      "pressure": 0.98
+    }
+  ],
+  "nodes": [
+    {
+      "id": "china",
+      "name": "China",
+      "type": "hub",
+      "teu": 275000000,
+      "weight": 1,
+      "category": "general"
+    },
+    {
+      "id": "united-states",
+      "name": "United States",
+      "type": "hub",
+      "teu": 61000000,
+      "weight": 0.47097577625413156,
+      "category": "energy"
+    },
+    {
+      "id": "singapore",
+      "name": "Singapore",
+      "type": "hub",
+      "teu": 39000000,
+      "weight": 0.3765875486765087,
+      "category": "food"
+    },
+    {
+      "id": "south-korea",
+      "name": "South Korea",
+      "type": "hub",
+      "teu": 30000000,
+      "weight": 0.3302891295379082,
+      "category": "manufacturing"
+    },
+    {
+      "id": "malaysia",
+      "name": "Malaysia",
+      "type": "hub",
+      "teu": 28000000,
+      "weight": 0.3190896140869862,
+      "category": "general"
+    },
+    {
+      "id": "netherlands",
+      "name": "Netherlands",
+      "type": "hub",
+      "teu": 25000000,
+      "weight": 0.3015113445777636,
+      "category": "energy"
+    },
+    {
+      "id": "united-arab-emirates",
+      "name": "United Arab Emirates",
+      "type": "hub",
+      "teu": 22000000,
+      "weight": 0.282842712474619,
+      "category": "food"
+    },
+    {
+      "id": "germany",
+      "name": "Germany",
+      "type": "hub",
+      "teu": 19000000,
+      "weight": 0.26285149626910836,
+      "category": "manufacturing"
+    },
+    {
+      "id": "japan",
+      "name": "Japan",
+      "type": "hub",
+      "teu": 18000000,
+      "weight": 0.2558408596267325,
+      "category": "general"
+    },
+    {
+      "id": "india",
+      "name": "India",
+      "type": "hub",
+      "teu": 17000000,
+      "weight": 0.2486326242032244,
+      "category": "energy"
+    },
+    {
+      "id": "spain",
+      "name": "Spain",
+      "type": "hub",
+      "teu": 17000000,
+      "weight": 0.2486326242032244,
+      "category": "food"
+    },
+    {
+      "id": "belgium",
+      "name": "Belgium",
+      "type": "hub",
+      "teu": 14000000,
+      "weight": 0.22563042992710644,
+      "category": "manufacturing"
+    }
+  ],
+  "edges": [
+    {
+      "id": "china-united-states",
+      "source": "china",
+      "target": "united-states",
+      "category": "general",
+      "intensity": 0.735,
+      "chokepoint": "suez"
+    },
+    {
+      "id": "china-singapore",
+      "source": "china",
+      "target": "singapore",
+      "category": "energy",
+      "intensity": 0.688,
+      "chokepoint": "panama"
+    },
+    {
+      "id": "china-south-korea",
+      "source": "china",
+      "target": "south-korea",
+      "category": "food",
+      "intensity": 0.665,
+      "chokepoint": "malacca"
+    },
+    {
+      "id": "china-malaysia",
+      "source": "china",
+      "target": "malaysia",
+      "category": "manufacturing",
+      "intensity": 0.66,
+      "chokepoint": "hormuz"
+    },
+    {
+      "id": "united-states-singapore",
+      "source": "united-states",
+      "target": "singapore",
+      "category": "energy",
+      "intensity": 0.424,
+      "chokepoint": "panama"
+    },
+    {
+      "id": "united-states-south-korea",
+      "source": "united-states",
+      "target": "south-korea",
+      "category": "food",
+      "intensity": 0.401,
+      "chokepoint": "malacca"
+    },
+    {
+      "id": "united-states-malaysia",
+      "source": "united-states",
+      "target": "malaysia",
+      "category": "manufacturing",
+      "intensity": 0.395,
+      "chokepoint": "hormuz"
+    },
+    {
+      "id": "united-states-netherlands",
+      "source": "united-states",
+      "target": "netherlands",
+      "category": "general",
+      "intensity": 0.386,
+      "chokepoint": "gibraltar"
+    },
+    {
+      "id": "singapore-south-korea",
+      "source": "singapore",
+      "target": "south-korea",
+      "category": "food",
+      "intensity": 0.353,
+      "chokepoint": "malacca"
+    },
+    {
+      "id": "singapore-malaysia",
+      "source": "singapore",
+      "target": "malaysia",
+      "category": "manufacturing",
+      "intensity": 0.348,
+      "chokepoint": "hormuz"
+    },
+    {
+      "id": "singapore-netherlands",
+      "source": "singapore",
+      "target": "netherlands",
+      "category": "general",
+      "intensity": 0.339,
+      "chokepoint": "gibraltar"
+    },
+    {
+      "id": "singapore-united-arab-emirates",
+      "source": "singapore",
+      "target": "united-arab-emirates",
+      "category": "energy",
+      "intensity": 0.33,
+      "chokepoint": "singapore"
+    },
+    {
+      "id": "south-korea-malaysia",
+      "source": "south-korea",
+      "target": "malaysia",
+      "category": "manufacturing",
+      "intensity": 0.325,
+      "chokepoint": "hormuz"
+    },
+    {
+      "id": "south-korea-netherlands",
+      "source": "south-korea",
+      "target": "netherlands",
+      "category": "general",
+      "intensity": 0.316,
+      "chokepoint": "gibraltar"
+    },
+    {
+      "id": "south-korea-united-arab-emirates",
+      "source": "south-korea",
+      "target": "united-arab-emirates",
+      "category": "energy",
+      "intensity": 0.307,
+      "chokepoint": "singapore"
+    },
+    {
+      "id": "south-korea-germany",
+      "source": "south-korea",
+      "target": "germany",
+      "category": "food",
+      "intensity": 0.297,
+      "chokepoint": "suez"
+    },
+    {
+      "id": "malaysia-netherlands",
+      "source": "malaysia",
+      "target": "netherlands",
+      "category": "general",
+      "intensity": 0.31,
+      "chokepoint": "gibraltar"
+    },
+    {
+      "id": "malaysia-united-arab-emirates",
+      "source": "malaysia",
+      "target": "united-arab-emirates",
+      "category": "energy",
+      "intensity": 0.301,
+      "chokepoint": "singapore"
+    },
+    {
+      "id": "malaysia-germany",
+      "source": "malaysia",
+      "target": "germany",
+      "category": "food",
+      "intensity": 0.291,
+      "chokepoint": "suez"
+    },
+    {
+      "id": "malaysia-japan",
+      "source": "malaysia",
+      "target": "japan",
+      "category": "manufacturing",
+      "intensity": 0.287,
+      "chokepoint": "panama"
+    },
+    {
+      "id": "netherlands-united-arab-emirates",
+      "source": "netherlands",
+      "target": "united-arab-emirates",
+      "category": "energy",
+      "intensity": 0.292,
+      "chokepoint": "singapore"
+    },
+    {
+      "id": "netherlands-germany",
+      "source": "netherlands",
+      "target": "germany",
+      "category": "food",
+      "intensity": 0.282,
+      "chokepoint": "suez"
+    },
+    {
+      "id": "netherlands-japan",
+      "source": "netherlands",
+      "target": "japan",
+      "category": "manufacturing",
+      "intensity": 0.279,
+      "chokepoint": "panama"
+    },
+    {
+      "id": "netherlands-india",
+      "source": "netherlands",
+      "target": "india",
+      "category": "general",
+      "intensity": 0.275,
+      "chokepoint": "malacca"
+    },
+    {
+      "id": "united-arab-emirates-germany",
+      "source": "united-arab-emirates",
+      "target": "germany",
+      "category": "food",
+      "intensity": 0.273,
+      "chokepoint": "suez"
+    },
+    {
+      "id": "united-arab-emirates-japan",
+      "source": "united-arab-emirates",
+      "target": "japan",
+      "category": "manufacturing",
+      "intensity": 0.269,
+      "chokepoint": "panama"
+    },
+    {
+      "id": "united-arab-emirates-india",
+      "source": "united-arab-emirates",
+      "target": "india",
+      "category": "general",
+      "intensity": 0.266,
+      "chokepoint": "malacca"
+    },
+    {
+      "id": "united-arab-emirates-spain",
+      "source": "united-arab-emirates",
+      "target": "spain",
+      "category": "energy",
+      "intensity": 0.266,
+      "chokepoint": "hormuz"
+    },
+    {
+      "id": "germany-japan",
+      "source": "germany",
+      "target": "japan",
+      "category": "manufacturing",
+      "intensity": 0.259,
+      "chokepoint": "panama"
+    },
+    {
+      "id": "germany-india",
+      "source": "germany",
+      "target": "india",
+      "category": "general",
+      "intensity": 0.256,
+      "chokepoint": "malacca"
+    },
+    {
+      "id": "germany-spain",
+      "source": "germany",
+      "target": "spain",
+      "category": "energy",
+      "intensity": 0.256,
+      "chokepoint": "hormuz"
+    },
+    {
+      "id": "germany-belgium",
+      "source": "germany",
+      "target": "belgium",
+      "category": "food",
+      "intensity": 0.244,
+      "chokepoint": "gibraltar"
+    },
+    {
+      "id": "japan-india",
+      "source": "japan",
+      "target": "india",
+      "category": "general",
+      "intensity": 0.252,
+      "chokepoint": "malacca"
+    },
+    {
+      "id": "japan-spain",
+      "source": "japan",
+      "target": "spain",
+      "category": "energy",
+      "intensity": 0.252,
+      "chokepoint": "hormuz"
+    },
+    {
+      "id": "japan-belgium",
+      "source": "japan",
+      "target": "belgium",
+      "category": "food",
+      "intensity": 0.241,
+      "chokepoint": "gibraltar"
+    },
+    {
+      "id": "india-spain",
+      "source": "india",
+      "target": "spain",
+      "category": "energy",
+      "intensity": 0.249,
+      "chokepoint": "hormuz"
+    },
+    {
+      "id": "india-belgium",
+      "source": "india",
+      "target": "belgium",
+      "category": "food",
+      "intensity": 0.237,
+      "chokepoint": "gibraltar"
+    },
+    {
+      "id": "spain-belgium",
+      "source": "spain",
+      "target": "belgium",
+      "category": "food",
+      "intensity": 0.237,
+      "chokepoint": "gibraltar"
+    }
+  ]
+}
