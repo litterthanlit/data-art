@@ -202,7 +202,7 @@ export class TradeScene {
     this.baseRotation.x = 0;
     this.baseRotation.y = 0;
     this.autoRotationY = 0;
-    this.camera.position.set(0, 3, 56);
+    this.camera.position.set(0, 4, 74);
     this.camera.lookAt(0, 0, 0);
     this.applyRotation();
     this.render();

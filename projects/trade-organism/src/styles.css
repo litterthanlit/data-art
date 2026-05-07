@@ -159,11 +159,6 @@ button:hover {
   line-height: 1.35;
 }
 
-.source-note {
-  bottom: 86px !important;
-  pointer-events: none;
-}
-
 @media (max-width: 720px) {
   .title,
   .inspector {
@@ -181,9 +176,5 @@ button:hover {
     bottom: 12px;
     left: 12px;
     justify-content: flex-start;
-  }
-
-  .source-note {
-    display: none;
   }
 }
