@@ -1,7 +1,4 @@
 import * as THREE from "three";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { FlowField } from "../particles/FlowField.js";
 
 export const CATEGORY_COLORS = {
@@ -20,8 +17,7 @@ export class TradeScene {
     this.stage = stage;
     this.onHover = onHover;
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x03060b, 0.012);
-    this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+    this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
@@ -51,31 +47,17 @@ export class TradeScene {
     this.organism = new THREE.Group();
     this.organism.add(this.edges, this.nodes);
     this.scene.add(this.organism);
-    this.atmosphere = this.createAtmosphere();
-    this.scene.add(this.atmosphere);
 
-    this.ambientLight = new THREE.AmbientLight(0xaecbff, 0.55);
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 1);
     this.scene.add(this.ambientLight);
 
     this.renderer.setClearColor(0x000000, 1);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.35;
     this.renderer.domElement.style.display = "block";
     this.renderer.domElement.style.position = "absolute";
     this.renderer.domElement.style.inset = "0";
     this.renderer.domElement.style.touchAction = "none";
     this.stage.appendChild(this.renderer.domElement);
-    this.composer = new EffectComposer(this.renderer);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(1, 1),
-      1.35,
-      0.7,
-      0.08
-    );
-    this.composer.addPass(this.bloomPass);
 
     this.resetView();
     this.handleResize = this.handleResize.bind(this);
@@ -120,7 +102,7 @@ export class TradeScene {
 
     for (const edge of network.edges) {
       const color = CATEGORY_COLORS[edge.category] ?? CATEGORY_COLORS.general;
-      const baseOpacity = 0.055 + edge.intensity * 0.16;
+      const baseOpacity = 0.34 + edge.intensity * 0.36;
       const geometry = new THREE.BufferGeometry().setFromPoints(
         edge.curve.getPoints(44)
       );
@@ -142,32 +124,20 @@ export class TradeScene {
 
     for (const node of network.nodes) {
       const color = CATEGORY_COLORS[node.category] ?? CATEGORY_COLORS.general;
-      const coreRadius = 0.08 + node.weight * 0.62;
-      const geometry = new THREE.SphereGeometry(coreRadius, 24, 16);
+      const geometry = new THREE.SphereGeometry(
+        0.18 + node.weight * 1.3,
+        24,
+        16
+      );
       const material = new THREE.MeshBasicMaterial({
         color,
         transparent: true,
-        opacity: 0.95,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
+        opacity: 0.88,
       });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.copy(node.position);
-      mesh.userData = { kind: "node", item: node, baseOpacity: 0.95 };
+      mesh.userData = { kind: "node", item: node, baseOpacity: 0.88 };
       this.nodes.add(mesh);
-
-      const haloGeometry = new THREE.SphereGeometry(coreRadius * 3.8, 20, 12);
-      const haloMaterial = new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity: 0.11,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
-      const halo = new THREE.Mesh(haloGeometry, haloMaterial);
-      halo.position.copy(node.position);
-      halo.userData = { kind: "node", item: node, baseOpacity: 0.11 };
-      this.nodes.add(halo);
     }
 
     this.flowField = new FlowField(network.edges);
@@ -270,8 +240,6 @@ export class TradeScene {
     this.clearGroup(this.nodes);
     this.clearGroup(this.edges);
     this.edgeHitSamples = [];
-    this.composer.dispose();
-    this.disposeObject(this.atmosphere);
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -283,8 +251,6 @@ export class TradeScene {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
-    this.composer.setSize(width, height);
-    this.bloomPass.setSize(width, height);
     this.render();
   }
 
@@ -430,8 +396,6 @@ export class TradeScene {
       : Math.sin(this.clock.elapsedTime * 0.22) * 0.08;
     this.organism.rotation.x = this.baseRotation.x + drift;
     this.organism.rotation.y = this.baseRotation.y + this.autoRotationY;
-    this.atmosphere.rotation.y = this.organism.rotation.y * 0.35;
-    this.atmosphere.rotation.x = this.organism.rotation.x * 0.18;
   }
 
   updateHover() {
@@ -512,23 +476,19 @@ export class TradeScene {
   }
 
   render() {
-    this.composer.render();
+    this.renderer.render(this.scene, this.camera);
   }
 
   clearGroup(group) {
     while (group.children.length > 0) {
       const child = group.children.pop();
-      this.disposeObject(child);
-    }
-  }
+      child.geometry?.dispose();
 
-  disposeObject(object) {
-    object.geometry?.dispose();
-
-    if (Array.isArray(object.material)) {
-      object.material.forEach((material) => material.dispose());
-    } else {
-      object.material?.dispose();
+      if (Array.isArray(child.material)) {
+        child.material.forEach((material) => material.dispose());
+      } else {
+        child.material?.dispose();
+      }
     }
   }
 
@@ -540,45 +500,5 @@ export class TradeScene {
     this.flowField.object.removeFromParent();
     this.flowField.dispose();
     this.flowField = null;
-  }
-
-  createAtmosphere() {
-    const count = 900;
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    const colorA = new THREE.Color(0x376bff);
-    const colorB = new THREE.Color(0xff7145);
-
-    for (let index = 0; index < count; index += 1) {
-      const seed = index + 1;
-      const angle = seed * 2.399963229728653;
-      const radius = 18 + ((seed * 37) % 100) * 0.52;
-      const height = (((seed * 53) % 100) / 100 - 0.5) * 56;
-      const depth = Math.sin(seed * 12.9898) * 24;
-      const positionIndex = index * 3;
-
-      positions[positionIndex] = Math.cos(angle) * radius;
-      positions[positionIndex + 1] = height;
-      positions[positionIndex + 2] = Math.sin(angle) * radius + depth;
-
-      const color = colorA.clone().lerp(colorB, ((seed * 17) % 100) / 100);
-      colors[positionIndex] = color.r * 0.38;
-      colors[positionIndex + 1] = color.g * 0.38;
-      colors[positionIndex + 2] = color.b * 0.38;
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    const material = new THREE.PointsMaterial({
-      size: 0.045,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.55,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-
-    return new THREE.Points(geometry, material);
   }
 }
