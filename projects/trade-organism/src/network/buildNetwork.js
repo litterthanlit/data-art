@@ -26,7 +26,7 @@ export function buildNetwork(data) {
       control,
       target.position,
     ]);
-    return { ...edge, source, target, choke, curve };
+    return { ...edge, source, target, choke, control, curve };
   });
 
   return {
