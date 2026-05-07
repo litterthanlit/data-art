@@ -101,6 +101,22 @@ export class TradeScene {
     this.edgeHitSamples = [];
 
     for (const edge of network.edges) {
+      const color = CATEGORY_COLORS[edge.category] ?? CATEGORY_COLORS.general;
+      const baseOpacity = 0.34 + edge.intensity * 0.36;
+      const geometry = new THREE.BufferGeometry().setFromPoints(
+        edge.curve.getPoints(44)
+      );
+      const material = new THREE.LineBasicMaterial({
+        color,
+        transparent: true,
+        opacity: baseOpacity,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const line = new THREE.Line(geometry, material);
+      line.userData = { kind: "edge", item: edge, baseOpacity };
+      this.edges.add(line);
+
       this.edgeHitSamples.push(
         ...edge.curve.getPoints(36).map((point) => ({ edge, point }))
       );
