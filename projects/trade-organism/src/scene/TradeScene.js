@@ -122,24 +122,6 @@ export class TradeScene {
       );
     }
 
-    for (const node of network.nodes) {
-      const color = CATEGORY_COLORS[node.category] ?? CATEGORY_COLORS.general;
-      const geometry = new THREE.SphereGeometry(
-        0.18 + node.weight * 1.3,
-        24,
-        16
-      );
-      const material = new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity: 0.88,
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.copy(node.position);
-      mesh.userData = { kind: "node", item: node, baseOpacity: 0.88 };
-      this.nodes.add(mesh);
-    }
-
     this.flowField = new FlowField(network.edges);
     this.edges.add(this.flowField.object);
 

@@ -21,20 +21,8 @@ export class FlowField {
     this.time = 0;
     this.particles = this.createParticles(edges);
 
-    this.positions = new Float32Array(this.particles.length * 3);
-    this.colors = new Float32Array(this.particles.length * 3);
     this.trailPositions = new Float32Array(this.particles.length * 2 * 3);
     this.trailColors = new Float32Array(this.particles.length * 2 * 3);
-    this.geometry = new THREE.BufferGeometry();
-    this.geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(this.positions, 3)
-    );
-    this.geometry.setAttribute(
-      "color",
-      new THREE.BufferAttribute(this.colors, 3)
-    );
-
     this.trailGeometry = new THREE.BufferGeometry();
     this.trailGeometry.setAttribute(
       "position",
@@ -45,15 +33,6 @@ export class FlowField {
       new THREE.BufferAttribute(this.trailColors, 3)
     );
 
-    this.material = new THREE.PointsMaterial({
-      size: 0.16,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.95,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-
     this.trailMaterial = new THREE.LineBasicMaterial({
       vertexColors: true,
       transparent: true,
@@ -62,10 +41,9 @@ export class FlowField {
       depthWrite: false,
     });
 
-    this.points = new THREE.Points(this.geometry, this.material);
     this.trails = new THREE.LineSegments(this.trailGeometry, this.trailMaterial);
     this.object = new THREE.Group();
-    this.object.add(this.trails, this.points);
+    this.object.add(this.trails);
     this.update(0);
   }
 
@@ -78,12 +56,8 @@ export class FlowField {
       const tailProgress = (progress - particle.length + 1) % 1;
       const point = particle.edge.curve.getPoint(progress);
       const tail = particle.edge.curve.getPoint(tailProgress);
-      const positionIndex = index * 3;
       const trailIndex = index * 6;
 
-      this.positions[positionIndex] = point.x;
-      this.positions[positionIndex + 1] = point.y;
-      this.positions[positionIndex + 2] = point.z;
       this.trailPositions[trailIndex] = tail.x;
       this.trailPositions[trailIndex + 1] = tail.y;
       this.trailPositions[trailIndex + 2] = tail.z;
@@ -98,9 +72,6 @@ export class FlowField {
         : DISABLED_COLOR;
       const tailColor = isVisible ? color.clone().multiplyScalar(0.22) : color;
 
-      this.colors[positionIndex] = color.r;
-      this.colors[positionIndex + 1] = color.g;
-      this.colors[positionIndex + 2] = color.b;
       this.trailColors[trailIndex] = tailColor.r;
       this.trailColors[trailIndex + 1] = tailColor.g;
       this.trailColors[trailIndex + 2] = tailColor.b;
@@ -109,15 +80,11 @@ export class FlowField {
       this.trailColors[trailIndex + 5] = color.b;
     }
 
-    this.geometry.attributes.position.needsUpdate = true;
-    this.geometry.attributes.color.needsUpdate = true;
     this.trailGeometry.attributes.position.needsUpdate = true;
     this.trailGeometry.attributes.color.needsUpdate = true;
   }
 
   dispose() {
-    this.geometry.dispose();
-    this.material.dispose();
     this.trailGeometry.dispose();
     this.trailMaterial.dispose();
   }
