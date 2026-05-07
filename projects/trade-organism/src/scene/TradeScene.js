@@ -114,7 +114,7 @@ export class TradeScene {
       this.organism.rotation.x = Math.sin(this.clock.elapsedTime * 0.22) * 0.08;
     }
 
-    this.flowField?.update(delta, this.layerState);
+    this.flowField?.update(this.paused ? 0 : delta, this.layerState);
     this.render();
   }
 
