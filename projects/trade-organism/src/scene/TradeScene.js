@@ -2,10 +2,10 @@ import * as THREE from "three";
 import { FlowField } from "../particles/FlowField.js";
 
 export const CATEGORY_COLORS = {
-  general: 0x9be7ff,
-  energy: 0xff6b3d,
-  food: 0xb9f56a,
-  manufacturing: 0x9d7cff,
+  general: 0x6fdcff,
+  energy: 0xff8f4a,
+  food: 0xbaffdf,
+  manufacturing: 0xbfd7ff,
 };
 
 export class TradeScene {
@@ -17,7 +17,7 @@ export class TradeScene {
     this.stage = stage;
     this.onHover = onHover;
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+    this.camera = new THREE.PerspectiveCamera(48, 1, 0.1, 1000);
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
@@ -48,7 +48,7 @@ export class TradeScene {
     this.organism.add(this.edges, this.nodes);
     this.scene.add(this.organism);
 
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 1);
+    this.ambientLight = new THREE.AmbientLight(0xb9d7ff, 0.8);
     this.scene.add(this.ambientLight);
 
     this.renderer.setClearColor(0x000000, 1);
@@ -102,7 +102,7 @@ export class TradeScene {
 
     for (const edge of network.edges) {
       const color = CATEGORY_COLORS[edge.category] ?? CATEGORY_COLORS.general;
-      const baseOpacity = 0.34 + edge.intensity * 0.36;
+      const baseOpacity = 0.018 + edge.intensity * 0.055;
       const geometry = new THREE.BufferGeometry().setFromPoints(
         edge.curve.getPoints(44)
       );
@@ -185,7 +185,7 @@ export class TradeScene {
     this.baseRotation.x = 0;
     this.baseRotation.y = 0;
     this.autoRotationY = 0;
-    this.camera.position.set(0, 4, 74);
+    this.camera.position.set(0, 2, 86);
     this.camera.lookAt(0, 0, 0);
     this.applyRotation();
     this.render();

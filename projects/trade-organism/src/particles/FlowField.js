@@ -1,10 +1,10 @@
 import * as THREE from "three";
 
 const CATEGORY_COLORS = {
-  general: 0x9be7ff,
-  energy: 0xff6b3d,
-  food: 0xb9f56a,
-  manufacturing: 0x9d7cff,
+  general: 0xdff7ff,
+  energy: 0xff9b5f,
+  food: 0xa9ffe2,
+  manufacturing: 0x7cc8ff,
 };
 
 const DISABLED_COLOR = new THREE.Color(0x000000);
@@ -70,7 +70,7 @@ export class FlowField {
         ? CATEGORY_THREE_COLORS[particle.edge.category] ??
           CATEGORY_THREE_COLORS.general
         : DISABLED_COLOR;
-      const tailColor = isVisible ? color.clone().multiplyScalar(0.22) : color;
+      const tailColor = isVisible ? color.clone().multiplyScalar(0.12) : color;
 
       this.trailColors[trailIndex] = tailColor.r;
       this.trailColors[trailIndex + 1] = tailColor.g;
@@ -91,12 +91,12 @@ export class FlowField {
 
   createParticles(edges) {
     return edges.flatMap((edge, edgeIndex) => {
-      const count = Math.max(5, Math.ceil(edge.intensity * 20));
+      const count = Math.max(8, Math.ceil(edge.intensity * 28));
       return Array.from({ length: count }, (_, particleIndex) => ({
         edge,
         offset: (particleIndex / count + edgeIndex * 0.137) % 1,
-        speed: 0.28 + edge.intensity * 0.62,
-        length: 0.018 + edge.intensity * 0.032,
+        speed: 0.2 + edge.intensity * 0.48,
+        length: 0.045 + edge.intensity * 0.075,
       }));
     });
   }
