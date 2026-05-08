@@ -89,9 +89,10 @@ button:hover {
 }
 
 .controls {
-  right: 18px;
-  bottom: 18px;
-  left: 18px;
+  right: 50%;
+  bottom: 14px;
+  left: auto;
+  transform: translateX(50%);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -100,9 +101,9 @@ button:hover {
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(14px);
-  opacity: 0.52;
+  opacity: 0.34;
   transition: opacity 160ms ease;
 }
 
@@ -187,6 +188,7 @@ button:hover {
     right: 12px;
     bottom: 12px;
     left: 12px;
+    transform: none;
     justify-content: flex-start;
   }
 }
