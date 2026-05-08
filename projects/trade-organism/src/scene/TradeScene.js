@@ -33,7 +33,7 @@ export class TradeScene {
     this.dragStart = null;
     this.baseRotation = { x: 0, y: 0 };
     this.autoRotationY = 0;
-    this.cameraTarget = new THREE.Vector3(0, 7, 0);
+    this.cameraTarget = new THREE.Vector3(0, 10, 0);
     this.pinchStart = null;
     this.zoomLimits = { min: 22, max: 82 };
     this.layerState = {
@@ -148,7 +148,6 @@ export class TradeScene {
 
     this.applyRotation();
     this.flowField?.update(this.paused ? 0 : delta, this.layerState);
-    this.updateHover();
     this.render();
   }
 
@@ -178,7 +177,7 @@ export class TradeScene {
     }
 
     this.flowField?.update(0, this.layerState);
-    this.updateHover();
+    this.setHoveredItem(null);
     this.render();
   }
 
@@ -186,9 +185,10 @@ export class TradeScene {
     this.baseRotation.x = 0;
     this.baseRotation.y = 0;
     this.autoRotationY = 0;
-    this.camera.position.set(0, 9, 104);
+    this.camera.position.set(0, 12, 112);
     this.camera.lookAt(this.cameraTarget);
     this.applyRotation();
+    this.setHoveredItem(null);
     this.render();
   }
 
@@ -205,7 +205,7 @@ export class TradeScene {
     }
 
     const center = bounds.getCenter(new THREE.Vector3());
-    this.organism.position.set(-center.x - 7, -center.y + 6, -center.z);
+    this.organism.position.set(-center.x - 22, -center.y + 24, -center.z);
   }
 
   dispose() {

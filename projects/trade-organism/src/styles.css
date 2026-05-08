@@ -67,7 +67,7 @@ button:hover {
   left: 18px;
   display: grid;
   gap: 4px;
-  opacity: 0.64;
+  opacity: 0.42;
   pointer-events: none;
 }
 
@@ -90,7 +90,7 @@ button:hover {
 
 .controls {
   right: 50%;
-  bottom: 14px;
+  bottom: 12px;
   left: auto;
   transform: translateX(50%);
   display: flex;
@@ -98,12 +98,12 @@ button:hover {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(14px);
-  opacity: 0.34;
+  opacity: 0.18;
   transition: opacity 160ms ease;
 }
 
@@ -169,7 +169,12 @@ button:hover {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
-  opacity: 0.62;
+  opacity: 0.34;
+}
+
+.inspector:hover,
+.inspector:focus-within {
+  opacity: 0.9;
 }
 
 @media (max-width: 720px) {
