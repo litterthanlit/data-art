@@ -1,8 +1,22 @@
 import * as THREE from "three";
 
-const PARTICLE_COUNT = 5200;
-const RIBBON_COUNT = 28;
-const RIBBON_SEGMENTS = 64;
+const FILAMENTS = 34;
+const SEGMENTS = 84;
+const SPARKS = 1600;
+const CME_RAYS = 18;
+const CME_SEGMENTS = 28;
+const STREAM_LENGTH = 82;
+const _tangent = new THREE.Vector3();
+const _radial = new THREE.Vector3();
+const _side = new THREE.Vector3();
+const _a = new THREE.Vector3();
+const _b = new THREE.Vector3();
+const _color = new THREE.Color();
+const _cool = new THREE.Color(0x3d7dff);
+const _cyan = new THREE.Color(0x7ae7ff);
+const _hot = new THREE.Color(0xffc56a);
+const _storm = new THREE.Color(0xff6a58);
+const _gold = new THREE.Color(0xffe6a3);
 
 export class PlasmaField {
   constructor() {
@@ -10,67 +24,152 @@ export class PlasmaField {
     this.time = 0;
     this.sample = null;
     this.layers = { plasma: true, cme: true, storm: true };
+    this.filamentMeta = [];
+    this.cmeMeta = [];
 
-    this.createParticles();
-    this.createRibbons();
-    this.createFlares();
-    this.createCore();
+    this.createFilaments();
+    this.createSparks();
+    this.createCmeBurst();
+    this.createStormSheath();
+    this.createHitTargets();
   }
 
   get object() {
     return this.group;
   }
 
-  createParticles() {
-    const positions = new Float32Array(PARTICLE_COUNT * 3);
-    const colors = new Float32Array(PARTICLE_COUNT * 3);
-    const seeds = new Float32Array(PARTICLE_COUNT * 4);
+  get hoverTargets() {
+    const targets = [];
+    if (this.layers.plasma !== false) targets.push(this.bodyHit);
+    if (this.layers.cme !== false) targets.push(this.flareHit);
+    if (this.layers.storm !== false) targets.push(this.stormHit);
+    return targets;
+  }
 
-    for (let i = 0; i < PARTICLE_COUNT; i += 1) {
-      const t = i / PARTICLE_COUNT;
-      const radius = 1.2 + Math.random() * 10.5;
-      const angle = Math.random() * Math.PI * 2;
-      positions[i * 3] = (t - 0.5) * 84;
-      positions[i * 3 + 1] = Math.cos(angle) * radius;
-      positions[i * 3 + 2] = Math.sin(angle) * radius;
-
-      seeds[i * 4] = Math.random();
-      seeds[i * 4 + 1] = Math.random();
-      seeds[i * 4 + 2] = Math.random();
-      seeds[i * 4 + 3] = 0.4 + Math.random() * 1.4;
-    }
-
-    this.particleGeometry = new THREE.BufferGeometry();
-    this.particleGeometry.setAttribute(
+  createFilaments() {
+    const vertexCount = FILAMENTS * SEGMENTS * 6;
+    this.filamentPositions = new Float32Array(vertexCount * 3);
+    this.filamentColors = new Float32Array(vertexCount * 3);
+    this.filamentGeometry = new THREE.BufferGeometry();
+    this.filamentGeometry.setAttribute(
       "position",
-      new THREE.BufferAttribute(positions, 3)
+      new THREE.BufferAttribute(this.filamentPositions, 3)
     );
-    this.particleGeometry.setAttribute(
+    this.filamentGeometry.setAttribute(
       "color",
-      new THREE.BufferAttribute(colors, 3)
-    );
-    this.particleGeometry.setAttribute(
-      "seed",
-      new THREE.BufferAttribute(seeds, 4)
+      new THREE.BufferAttribute(this.filamentColors, 3)
     );
 
-    this.particleMaterial = new THREE.ShaderMaterial({
+    this.filamentMaterial = new THREE.ShaderMaterial({
+      vertexColors: true,
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
+      toneMapped: false,
+      uniforms: { uOpacity: { value: 0.9 } },
+      vertexShader: `
+        varying vec3 vColor;
+        void main() {
+          vColor = color;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        uniform float uOpacity;
+        void main() {
+          gl_FragColor = vec4(vColor, uOpacity);
+        }
+      `,
+    });
+
+    this.filaments = new THREE.Mesh(this.filamentGeometry, this.filamentMaterial);
+    this.filaments.frustumCulled = false;
+    this.group.add(this.filaments);
+
+    for (let i = 0; i < FILAMENTS; i += 1) {
+      this.filamentMeta.push({
+        phase: (i / FILAMENTS) * Math.PI * 2,
+        radius: 1.8 + (i % 9) * 0.95,
+        spin: 0.22 + (i % 6) * 0.08,
+        width: 0.28 + (i % 5) * 0.08,
+        sheath: i % 4 === 0,
+      });
+    }
+  }
+
+  createSparks() {
+    const vertexCount = SPARKS * 6;
+    const positions = new Float32Array(vertexCount * 3);
+    const corners = new Float32Array(vertexCount * 2);
+    const seeds = new Float32Array(vertexCount * 4);
+    const quad = [
+      [-1, -1],
+      [1, -1],
+      [1, 1],
+      [-1, -1],
+      [1, 1],
+      [-1, 1],
+    ];
+
+    for (let i = 0; i < SPARKS; i += 1) {
+      const t = i / SPARKS;
+      const radius = 0.8 + Math.random() * 11.5;
+      const angle = Math.random() * Math.PI * 2;
+      const x = (t - 0.5) * STREAM_LENGTH;
+      const y = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const seed = [
+        Math.random(),
+        Math.random(),
+        Math.random(),
+        0.35 + Math.random() * 0.9,
+      ];
+
+      for (let c = 0; c < 6; c += 1) {
+        const index = i * 6 + c;
+        positions[index * 3] = x;
+        positions[index * 3 + 1] = y;
+        positions[index * 3 + 2] = z;
+        corners[index * 2] = quad[c][0];
+        corners[index * 2 + 1] = quad[c][1];
+        seeds[index * 4] = seed[0];
+        seeds[index * 4 + 1] = seed[1];
+        seeds[index * 4 + 2] = seed[2];
+        seeds[index * 4 + 3] = seed[3];
+      }
+    }
+
+    this.sparkGeometry = new THREE.BufferGeometry();
+    this.sparkGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(positions, 3)
+    );
+    this.sparkGeometry.setAttribute(
+      "corner",
+      new THREE.BufferAttribute(corners, 2)
+    );
+    this.sparkGeometry.setAttribute("seed", new THREE.BufferAttribute(seeds, 4));
+
+    this.sparkMaterial = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
       uniforms: {
         uTime: { value: 0 },
-        uDensity: { value: 0.3 },
+        uDensity: { value: 0.4 },
         uSpeed: { value: 0.3 },
         uHeat: { value: 0.2 },
         uStorm: { value: 0 },
         uShock: { value: 0 },
-        uOpacity: { value: 0.85 },
       },
       vertexShader: `
+        attribute vec2 corner;
         attribute vec4 seed;
         varying vec3 vColor;
         varying float vAlpha;
+        varying vec2 vCorner;
         uniform float uTime;
         uniform float uDensity;
         uniform float uSpeed;
@@ -80,130 +179,128 @@ export class PlasmaField {
 
         void main() {
           vec3 p = position;
-          float along = p.x;
-          float swirl = uTime * (0.35 + uSpeed * 1.8) + seed.x * 6.283;
-          float radial = length(p.yz);
-          float breathe = 1.0 + uDensity * 0.85 + uShock * 0.55;
-          float twist = swirl * (0.35 + uDensity * 0.5);
+          float angle0 = atan(p.z, p.y);
+          float radial = max(length(p.yz), 0.15);
+          float twist = uTime * (0.28 + uSpeed * 1.35) + seed.x * 6.283185;
+          float breathe = 0.92 + uDensity * 0.55 + uShock * 0.38 + sin(uTime * 0.85 + seed.y) * 0.05;
+          p.y = cos(angle0 + twist * 0.45) * radial * breathe;
+          p.z = sin(angle0 + twist * 0.45) * radial * breathe;
+          p.x += sin(uTime * (0.7 + uSpeed * 1.4) + seed.y * 10.0) * (0.5 + uSpeed * 2.4);
+          p.y += sin(uTime * 1.3 + seed.z * 8.0) * (0.12 + uStorm * 1.5);
+          p.z += cos(uTime * 1.05 + seed.x * 7.0) * (0.12 + uStorm * 1.2);
 
-          p.y = cos(atan(p.z, p.y) + twist) * radial * breathe;
-          p.z = sin(atan(p.z, p.y) + twist) * radial * breathe;
-          p.x = along + sin(uTime * 0.7 + seed.y * 12.0) * (0.4 + uSpeed * 1.8);
-          p.y += sin(uTime * 1.4 + seed.z * 9.0) * (0.2 + uStorm * 1.8);
-          p.z += cos(uTime * 1.1 + seed.x * 7.0) * (0.2 + uStorm * 1.4);
-
-          float heat = clamp(uHeat + uShock * 0.55 + seed.y * 0.15, 0.0, 1.0);
-          vec3 cool = vec3(0.25, 0.55, 1.0);
-          vec3 hot = vec3(1.0, 0.62, 0.28);
-          vec3 storm = vec3(1.0, 0.42, 0.38);
+          float heat = clamp(uHeat + uShock * 0.5 + seed.z * 0.12, 0.0, 1.0);
+          vec3 cool = vec3(0.28, 0.5, 1.0);
+          vec3 hot = vec3(1.0, 0.78, 0.38);
+          vec3 storm = vec3(1.0, 0.34, 0.3);
           vColor = mix(cool, hot, heat);
-          vColor = mix(vColor, storm, uStorm * 0.65);
-          vAlpha = (0.18 + seed.w * 0.35) * (0.55 + uDensity * 0.9 + uShock * 0.4);
+          vColor = mix(vColor, storm, clamp(uStorm, 0.0, 1.0));
+          vAlpha = 0.38 + seed.w * 0.32 + uDensity * 0.18 + uShock * 0.2;
+          vCorner = corner;
 
-          vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
-          gl_PointSize = (2.0 + seed.w * 4.5 + uDensity * 5.0 + uShock * 3.0) * (120.0 / -mvPosition.z);
-          gl_Position = projectionMatrix * mvPosition;
+          float size = 0.22 + seed.w * 0.32 + uDensity * 0.4 + uShock * 0.28;
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          mv.xy += corner * size;
+          gl_Position = projectionMatrix * mv;
         }
       `,
       fragmentShader: `
         varying vec3 vColor;
         varying float vAlpha;
-        uniform float uOpacity;
+        varying vec2 vCorner;
 
         void main() {
-          vec2 uv = gl_PointCoord - vec2(0.5);
-          float d = length(uv);
-          if (d > 0.5) discard;
-          float glow = smoothstep(0.5, 0.0, d);
-          gl_FragColor = vec4(vColor * (0.55 + glow * 1.8), vAlpha * glow * uOpacity);
+          float d = length(vCorner);
+          if (d > 1.0) discard;
+          float glow = pow(1.0 - d, 1.55);
+          gl_FragColor = vec4(vColor * (0.45 + glow * 2.1), vAlpha * glow);
         }
       `,
     });
 
-    this.particles = new THREE.Points(
-      this.particleGeometry,
-      this.particleMaterial
-    );
-    this.group.add(this.particles);
+    this.sparks = new THREE.Mesh(this.sparkGeometry, this.sparkMaterial);
+    this.sparks.frustumCulled = false;
+    this.group.add(this.sparks);
   }
 
-  createRibbons() {
-    this.ribbons = new THREE.Group();
-    this.ribbonMeshes = [];
+  createCmeBurst() {
+    const vertexCount = CME_RAYS * CME_SEGMENTS * 6;
+    this.cmePositions = new Float32Array(vertexCount * 3);
+    this.cmeColors = new Float32Array(vertexCount * 3);
+    this.cmeGeometry = new THREE.BufferGeometry();
+    this.cmeGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(this.cmePositions, 3)
+    );
+    this.cmeGeometry.setAttribute(
+      "color",
+      new THREE.BufferAttribute(this.cmeColors, 3)
+    );
 
-    for (let i = 0; i < RIBBON_COUNT; i += 1) {
-      const positions = new Float32Array((RIBBON_SEGMENTS + 1) * 3);
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-      const material = new THREE.LineBasicMaterial({
-        color: 0x6ec8ff,
-        transparent: true,
-        opacity: 0.12,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
+    this.cmeMaterial = this.filamentMaterial.clone();
+    this.cmeMaterial.uniforms = { uOpacity: { value: 0 } };
+    this.cmeBurst = new THREE.Mesh(this.cmeGeometry, this.cmeMaterial);
+    this.cmeBurst.frustumCulled = false;
+    this.group.add(this.cmeBurst);
+
+    for (let i = 0; i < CME_RAYS; i += 1) {
+      this.cmeMeta.push({
+        angle: (i / CME_RAYS) * Math.PI * 2,
+        tilt: (i % 5) * 0.18 - 0.36,
+        length: 8 + (i % 7) * 1.4,
+        width: 0.18 + (i % 3) * 0.05,
       });
-      const line = new THREE.Line(geometry, material);
-      line.userData = {
-        phase: (i / RIBBON_COUNT) * Math.PI * 2,
-        radius: 2.4 + (i % 7) * 1.15,
-        spin: 0.35 + (i % 5) * 0.12,
-      };
-      this.ribbonMeshes.push(line);
-      this.ribbons.add(line);
     }
-
-    this.group.add(this.ribbons);
   }
 
-  createFlares() {
-    const geometry = new THREE.SphereGeometry(1, 16, 16);
-    this.flareMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffd27a,
+  createStormSheath() {
+    this.sheathMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff6a58,
       transparent: true,
       opacity: 0,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      toneMapped: false,
     });
-    this.flare = new THREE.Mesh(geometry, this.flareMaterial);
-    this.flare.position.set(-38, 0, 0);
-    this.group.add(this.flare);
-
-    this.shockMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    this.shock = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 20, 20),
-      this.shockMaterial
+    this.sheath = new THREE.Mesh(
+      new THREE.SphereGeometry(6.4, 22, 16),
+      this.sheathMaterial
     );
-    this.group.add(this.shock);
+    this.sheath.position.set(11, 0, 0);
+    this.group.add(this.sheath);
   }
 
-  createCore() {
-    this.coreMaterial = new THREE.MeshBasicMaterial({
-      color: 0x7fd0ff,
+  createHitTargets() {
+    const hidden = new THREE.MeshBasicMaterial({
       transparent: true,
-      opacity: 0.08,
-      blending: THREE.AdditiveBlending,
+      opacity: 0,
       depthWrite: false,
     });
-    this.core = new THREE.Mesh(
-      new THREE.SphereGeometry(3.2, 24, 24),
-      this.coreMaterial
+
+    this.bodyHit = new THREE.Mesh(
+      new THREE.CylinderGeometry(12.5, 12.5, STREAM_LENGTH, 16, 1, true),
+      hidden
     );
-    this.group.add(this.core);
+    this.bodyHit.rotation.z = Math.PI / 2;
+    this.bodyHit.userData.kind = "plasma";
+
+    this.flareHit = new THREE.Mesh(new THREE.SphereGeometry(7, 12, 12), hidden);
+    this.flareHit.position.set(-36, 0, 0);
+    this.flareHit.userData.kind = "cme";
+
+    this.stormHit = new THREE.Mesh(new THREE.SphereGeometry(10, 12, 12), hidden);
+    this.stormHit.position.set(11, 0, 0);
+    this.stormHit.userData.kind = "storm";
+
+    this.group.add(this.bodyHit, this.flareHit, this.stormHit);
   }
 
   setLayers(layers) {
     this.layers = { ...this.layers, ...layers };
-    this.particles.visible = this.layers.plasma !== false;
-    this.ribbons.visible = this.layers.plasma !== false;
-    this.core.visible = this.layers.plasma !== false;
-    this.flare.visible = this.layers.cme !== false;
-    this.shock.visible = this.layers.storm !== false;
+    this.filaments.visible = this.layers.plasma !== false;
+    this.sparks.visible = this.layers.plasma !== false;
+    this.cmeBurst.visible = this.layers.cme !== false;
+    this.sheath.visible = this.layers.storm !== false;
   }
 
   setSample(sample) {
@@ -213,76 +310,200 @@ export class PlasmaField {
   update(delta) {
     if (!this.sample) return;
 
-    this.time += delta * (0.55 + this.sample.speedN * 1.6);
+    this.time += delta * (0.45 + this.sample.speedN * 1.35);
 
-    const density = this.sample.densityN;
+    const density = 0.28 + this.sample.densityN * 0.72;
     const speed = this.sample.speedN;
     const heat = this.sample.tempN;
     const storm = this.sample.storm;
     const shock = this.sample.shock;
-    const launch = this.sample.launch;
+    const launch = this.layers.cme === false ? 0 : this.sample.launch;
+    const stormVisible = this.layers.storm === false ? 0 : Math.max(storm, shock * 0.8);
 
-    this.particleMaterial.uniforms.uTime.value = this.time;
-    this.particleMaterial.uniforms.uDensity.value = density;
-    this.particleMaterial.uniforms.uSpeed.value = speed;
-    this.particleMaterial.uniforms.uHeat.value = heat;
-    this.particleMaterial.uniforms.uStorm.value = storm;
-    this.particleMaterial.uniforms.uShock.value = shock;
+    this.sparkMaterial.uniforms.uTime.value = this.time;
+    this.sparkMaterial.uniforms.uDensity.value = density;
+    this.sparkMaterial.uniforms.uSpeed.value = speed;
+    this.sparkMaterial.uniforms.uHeat.value = heat;
+    this.sparkMaterial.uniforms.uStorm.value = stormVisible;
+    this.sparkMaterial.uniforms.uShock.value = shock;
 
-    for (const ribbon of this.ribbonMeshes) {
-      const positions = ribbon.geometry.attributes.position.array;
-      const { phase, radius, spin } = ribbon.userData;
-      const twist = this.time * spin * (0.4 + this.sample.btN * 1.4);
+    this.updateFilaments(density, heat, stormVisible, shock, speed);
+    this.updateCmeBurst(launch, heat);
+    this.updateStormSheath(stormVisible, shock);
+  }
 
-      for (let i = 0; i <= RIBBON_SEGMENTS; i += 1) {
-        const t = i / RIBBON_SEGMENTS;
-        const x = (t - 0.5) * 78;
-        const localRadius =
-          radius *
-          (0.75 + density * 0.9 + Math.sin(t * 8.0 + phase) * 0.18 + shock * 0.35);
-        const angle = phase + twist + t * (2.2 + this.sample.btN * 4.5);
-        positions[i * 3] = x;
-        positions[i * 3 + 1] = Math.cos(angle) * localRadius;
-        positions[i * 3 + 2] = Math.sin(angle) * localRadius;
+  updateFilaments(density, heat, storm, shock, speed) {
+    const positions = this.filamentPositions;
+    const colors = this.filamentColors;
+    let cursor = 0;
+
+    for (let f = 0; f < FILAMENTS; f += 1) {
+      const meta = this.filamentMeta[f];
+      const twist = this.time * meta.spin * (0.55 + this.sample.btN * 1.6);
+      const width =
+        meta.width *
+        (0.95 + density * 1.55 + shock * 0.9 + storm * 0.35) *
+        (meta.sheath ? 2.3 : 1);
+
+      for (let i = 0; i < SEGMENTS; i += 1) {
+        const t0 = i / SEGMENTS;
+        const t1 = (i + 1) / SEGMENTS;
+        this.filamentPoint(_a, meta, t0, twist, density, shock, speed);
+        this.filamentPoint(_b, meta, t1, twist, density, shock, speed);
+        this.writeQuad(positions, cursor, _a, _b, width);
+
+        _color.copy(_cool).lerp(_cyan, 0.25 + t0 * 0.35);
+        _color.lerp(_hot, Math.max(heat, shock * 0.65));
+        _color.lerp(_storm, storm);
+        const shade = 0.55 + density * 0.45 + storm * 0.2 + (meta.sheath ? 0.05 : 0.22);
+        for (let v = 0; v < 6; v += 1) {
+          const colorIndex = (cursor + v) * 3;
+          colors[colorIndex] = _color.r * shade;
+          colors[colorIndex + 1] = _color.g * shade;
+          colors[colorIndex + 2] = _color.b * shade;
+        }
+        cursor += 6;
       }
-
-      ribbon.geometry.attributes.position.needsUpdate = true;
-      ribbon.material.opacity = 0.05 + density * 0.12 + this.sample.btN * 0.1;
-      ribbon.material.color.setRGB(
-        0.35 + heat * 0.55,
-        0.55 + density * 0.25,
-        0.95 - heat * 0.35
-      );
     }
 
-    const flareStrength = this.layers.cme === false ? 0 : launch;
-    this.flareMaterial.opacity = Math.min(0.85, flareStrength * 0.7);
-    const flareScale = 1.5 + flareStrength * 10;
-    this.flare.scale.setScalar(flareScale);
-    this.flare.position.set(-36 - flareStrength * 4, Math.sin(this.time) * 2, 0);
+    this.filamentGeometry.attributes.position.needsUpdate = true;
+    this.filamentGeometry.attributes.color.needsUpdate = true;
+    this.filamentGeometry.computeBoundingSphere();
+    this.filamentMaterial.uniforms.uOpacity.value = 0.55 + density * 0.35;
+  }
 
-    const stormStrength =
-      this.layers.storm === false ? 0 : Math.max(storm, shock * 0.75);
-    this.shockMaterial.opacity = Math.min(0.55, stormStrength * 0.45);
-    this.shock.scale.setScalar(4 + stormStrength * 18);
-    this.shock.position.set(8 + shock * 10, 0, 0);
+  filamentPoint(target, meta, t, twist, density, shock, speed) {
+    const x = (t - 0.5) * STREAM_LENGTH;
+    const breathe =
+      0.78 +
+      density * 0.7 +
+      shock * 0.32 +
+      Math.sin(this.time * 0.9 + meta.phase) * 0.05;
+    const radius =
+      meta.radius *
+      breathe *
+      (0.72 + Math.sin(t * 7.5 + meta.phase) * 0.16 + this.sample.btN * 0.2);
+    const stretch = 1 + speed * 0.12;
+    const angle = meta.phase + twist + t * (2.1 + this.sample.btN * 4.2);
+    target.set(
+      x * stretch,
+      Math.cos(angle) * radius,
+      Math.sin(angle) * radius
+    );
+  }
 
-    this.coreMaterial.opacity = 0.05 + density * 0.12 + storm * 0.1;
-    this.core.scale.setScalar(1 + density * 1.4 + shock * 0.8);
+  updateCmeBurst(launch, heat) {
+    const positions = this.cmePositions;
+    const colors = this.cmeColors;
+    let cursor = 0;
+    const strength = Math.min(1, launch);
+    this.cmeMaterial.uniforms.uOpacity.value = strength * 0.95;
+    this.cmeBurst.visible = this.layers.cme !== false && strength > 0.04;
+
+    for (let r = 0; r < CME_RAYS; r += 1) {
+      const meta = this.cmeMeta[r];
+      const length = meta.length * (0.55 + strength * 1.8);
+      for (let i = 0; i < CME_SEGMENTS; i += 1) {
+        const t0 = i / CME_SEGMENTS;
+        const t1 = (i + 1) / CME_SEGMENTS;
+        this.cmePoint(_a, meta, t0, length, strength);
+        this.cmePoint(_b, meta, t1, length, strength);
+        this.writeQuad(positions, cursor, _a, _b, meta.width * (1.1 + strength));
+
+        _color.copy(_gold).lerp(_hot, heat * 0.35);
+        const fade = (1 - t0) * (0.35 + strength);
+        for (let v = 0; v < 6; v += 1) {
+          const colorIndex = (cursor + v) * 3;
+          colors[colorIndex] = _color.r * fade;
+          colors[colorIndex + 1] = _color.g * fade;
+          colors[colorIndex + 2] = _color.b * fade;
+        }
+        cursor += 6;
+      }
+    }
+
+    this.cmeGeometry.attributes.position.needsUpdate = true;
+    this.cmeGeometry.attributes.color.needsUpdate = true;
+  }
+
+  cmePoint(target, meta, t, length, strength) {
+    const x = -38 - t * length * 0.35 - strength * 2;
+    const radius = 1.2 + t * length;
+    const flicker = this.time * 2.4 + meta.angle;
+    target.set(
+      x,
+      Math.cos(meta.angle + flicker * 0.05) * radius,
+      Math.sin(meta.angle + meta.tilt + flicker * 0.05) * radius
+    );
+  }
+
+  updateStormSheath(storm, shock) {
+    const pulse = Math.max(storm, shock * 0.75);
+    this.sheathMaterial.opacity = Math.min(0.38, pulse * 0.42);
+    this.sheath.scale.set(2.4 + pulse * 2.2, 1.1 + pulse * 1.4, 1.1 + pulse * 1.4);
+    this.sheath.position.set(8 + shock * 9, 0, 0);
+    this.stormHit.position.copy(this.sheath.position);
+    this.stormHit.scale.setScalar(0.8 + pulse * 1.1);
+    this.flareHit.scale.setScalar(0.7 + this.sample.launch * 1.4);
+  }
+
+  writeQuad(positions, cursor, a, b, width) {
+    _tangent.copy(b).sub(a);
+    if (_tangent.lengthSq() < 1e-8) {
+      _tangent.set(1, 0, 0);
+    } else {
+      _tangent.normalize();
+    }
+
+    _radial.set(0, a.y, a.z);
+    if (_radial.lengthSq() < 1e-6) {
+      _radial.set(0, 1, 0);
+    } else {
+      _radial.normalize();
+    }
+
+    _side.crossVectors(_tangent, _radial);
+    if (_side.lengthSq() < 1e-6) {
+      _side.crossVectors(_tangent, new THREE.Vector3(0, 1, 0));
+    }
+    _side.normalize().multiplyScalar(width * 0.5);
+
+    const verts = [
+      a.x - _side.x,
+      a.y - _side.y,
+      a.z - _side.z,
+      a.x + _side.x,
+      a.y + _side.y,
+      a.z + _side.z,
+      b.x + _side.x,
+      b.y + _side.y,
+      b.z + _side.z,
+      a.x - _side.x,
+      a.y - _side.y,
+      a.z - _side.z,
+      b.x + _side.x,
+      b.y + _side.y,
+      b.z + _side.z,
+      b.x - _side.x,
+      b.y - _side.y,
+      b.z - _side.z,
+    ];
+
+    positions.set(verts, cursor * 3);
   }
 
   dispose() {
-    this.particleGeometry.dispose();
-    this.particleMaterial.dispose();
-    this.flare.geometry.dispose();
-    this.flareMaterial.dispose();
-    this.shock.geometry.dispose();
-    this.shockMaterial.dispose();
-    this.core.geometry.dispose();
-    this.coreMaterial.dispose();
-    for (const ribbon of this.ribbonMeshes) {
-      ribbon.geometry.dispose();
-      ribbon.material.dispose();
-    }
+    this.filamentGeometry.dispose();
+    this.filamentMaterial.dispose();
+    this.sparkGeometry.dispose();
+    this.sparkMaterial.dispose();
+    this.cmeGeometry.dispose();
+    this.cmeMaterial.dispose();
+    this.sheath.geometry.dispose();
+    this.sheathMaterial.dispose();
+    this.bodyHit.geometry.dispose();
+    this.flareHit.geometry.dispose();
+    this.stormHit.geometry.dispose();
+    this.bodyHit.material.dispose();
   }
 }

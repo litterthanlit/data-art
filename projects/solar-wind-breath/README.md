@@ -38,4 +38,6 @@ The bundled JSON is a stable artwork cache. Continuous plasma values (density, s
 - CME launches → upstream gold flares
 - Storm Kp peaks → whole-field coral pulse
 
+Hover the stream, a CME flare, or the storm pulse for labels.
+
 This is a data sculpture, not a space-weather dashboard.

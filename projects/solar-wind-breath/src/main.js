@@ -1,13 +1,14 @@
 import "./styles.css";
 import { buildPlasma } from "./plasma/buildPlasma.js";
 import { SolarScene } from "./scene/SolarScene.js";
-import { formatHour } from "./ui/readouts.js";
+import { formatCme, formatHour, formatStorm } from "./ui/readouts.js";
 
 const DATA_URL = `${import.meta.env.BASE_URL}data/solar-wind-breath.json`;
 const state = {
   paused: false,
   layers: { plasma: true, cme: true, storm: true },
   scrubbing: false,
+  hoverKind: null,
 };
 
 let activeScene = null;
@@ -37,6 +38,7 @@ async function boot() {
   const scene = new SolarScene({
     stage: document.getElementById("stage"),
     onSample: updateInspector,
+    onHover: updateHover,
   });
   activeScene = scene;
   scene.load(plasmaData);
@@ -78,12 +80,13 @@ function wireControls(scene) {
 
   const handleTimeInput = () => {
     state.scrubbing = true;
-    scene.setAutoPlay(false);
+    scene.setScrubbing(true);
     scene.setProgress(Number(timeInput.value) / 100);
   };
 
   const handleTimeCommit = () => {
     state.scrubbing = false;
+    scene.setScrubbing(false);
   };
 
   pauseButton.addEventListener("click", handlePause);
@@ -109,6 +112,11 @@ function wireControls(scene) {
   };
 }
 
+function updateHover(kind) {
+  state.hoverKind = kind;
+  updateInspector(activeScene?.currentSample);
+}
+
 function updateInspector(sample, { fromAutoplay = false } = {}) {
   const inspector = document.getElementById("inspector");
   const timeInput = document.getElementById("time");
@@ -126,6 +134,17 @@ function updateInspector(sample, { fromAutoplay = false } = {}) {
   }
 
   timeLabel.textContent = sample.hour.t.slice(0, 16).replace("T", " ");
+
+  if (state.hoverKind === "cme" && sample.cme) {
+    inspector.textContent = formatCme(sample.cme);
+    return;
+  }
+
+  if (state.hoverKind === "storm" && sample.stormEvent) {
+    inspector.textContent = formatStorm(sample.stormEvent);
+    return;
+  }
+
   inspector.textContent = formatHour(sample.hour, sample.cme);
 }
 

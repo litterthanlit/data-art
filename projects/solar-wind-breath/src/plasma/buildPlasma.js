@@ -62,5 +62,26 @@ export function sampleAtProgress(plasma, progress) {
     launch: a.launch * (1 - mix) + b.launch * mix,
     activity: a.activity * (1 - mix) + b.activity * mix,
     cme: a.cmeId ? plasma.cmeById.get(a.cmeId) : null,
+    stormEvent: stormAtTime(plasma, a),
   };
+}
+
+function stormAtTime(plasma, hour) {
+  if (hour.storm < 0.18 || !plasma.storms.length) return null;
+
+  const timeMs = Date.parse(hour.t);
+  let nearest = plasma.storms[0];
+  let nearestDist = Infinity;
+
+  for (const storm of plasma.storms) {
+    for (const sample of storm.kpSeries) {
+      const dist = Math.abs(Date.parse(sample.time) - timeMs);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = storm;
+      }
+    }
+  }
+
+  return nearest;
 }
