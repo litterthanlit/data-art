@@ -1,0 +1,20 @@
+{
+  "name": "latent-archive",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "data": "node scripts/build-archive-data.mjs"
+  },
+  "dependencies": {
+    "three": "^0.164.1"
+  },
+  "devDependencies": {
+    "omggif": "^1.0.10",
+    "umap-js": "^1.4.0",
+    "vite": "^8.0.10"
+  }
+}
