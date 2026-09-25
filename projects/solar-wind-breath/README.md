@@ -31,12 +31,17 @@ The bundled JSON is a stable artwork cache. Continuous plasma values (density, s
 
 ## Visual mapping
 
-- Proton density → particle thickness / glow mass
-- Flow speed → stream stretch and urgency
-- Magnetic intensity → ribbon twist
-- Temperature → cool cyan ↔ hot amber
-- CME launches → upstream gold flares
-- Storm Kp peaks → whole-field coral pulse
+- Proton density → how many plasma streaks are alive, body thickness
+- Flow speed → streak trail length, drift rate, stream stretch
+- Magnetic intensity → ribbon and streak twist
+- Temperature → cool indigo/cyan ↔ hot amber
+- CME launches → gold eruption from the upstream source, scaled by CME speed
+- Shock arrivals → a white compression wave rolling down the stream, flash + camera tremor
+- Storm Kp → coral magnetosphere shell, turbulent filaments, bloom surge
+- Headline → current phase (quiet · CME launch · shock · NOAA G-scale storm)
+- Scrubber track → the storm timeline (amber shocks, coral storms)
+
+Autoplay rushes through quiet hours and slows down during activity so the storms get screen time. Camera tremor is disabled under `prefers-reduced-motion`.
 
 Hover the stream, a CME flare, or the storm pulse for labels.
 

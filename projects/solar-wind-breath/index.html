@@ -8,6 +8,12 @@
       content="Solar Wind Breath, an interactive Three.js data sculpture of heliospheric plasma and coronal mass ejections."
     />
     <title>Solar Wind Breath</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&family=Instrument+Serif:ital@0;1&display=swap"
+    />
   </head>
   <body>
     <main id="stage" aria-label="Solar Wind Breath 3D artwork">
@@ -15,6 +21,11 @@
         <h1>Solar Wind Breath</h1>
         <p id="status" aria-live="polite">Loading</p>
       </header>
+
+      <section class="moment" aria-label="Current moment">
+        <p id="phase" class="phase" aria-live="polite">Quiet solar wind</p>
+        <p id="moment-time" class="moment-time" aria-hidden="true"></p>
+      </section>
 
       <section class="controls" aria-label="Controls">
         <button id="pause" type="button">Pause</button>
@@ -38,7 +49,7 @@
 
         <label class="time-control">
           <span id="time-label">Time</span>
-          <input id="time" type="range" min="0" max="100" value="0" />
+          <input id="time" type="range" min="0" max="1000" value="0" aria-describedby="time-label" />
         </label>
       </section>
 

@@ -1,7 +1,14 @@
 import "./styles.css";
 import { buildPlasma } from "./plasma/buildPlasma.js";
 import { SolarScene } from "./scene/SolarScene.js";
-import { formatCme, formatHour, formatStorm } from "./ui/readouts.js";
+import {
+  describePhase,
+  formatCme,
+  formatHour,
+  formatMoment,
+  formatStorm,
+  timelineGradient,
+} from "./ui/readouts.js";
 
 const DATA_URL = `${import.meta.env.BASE_URL}data/solar-wind-breath.json`;
 const state = {
@@ -45,6 +52,9 @@ async function boot() {
   scene.setPaused(state.paused);
   scene.setLayers(state.layers);
   cleanupControls = wireControls(scene);
+  document
+    .getElementById("time")
+    .style.setProperty("--track", timelineGradient(plasmaData.samples));
   scene.start();
 
   document.getElementById("status").textContent =
@@ -81,7 +91,7 @@ function wireControls(scene) {
   const handleTimeInput = () => {
     state.scrubbing = true;
     scene.setScrubbing(true);
-    scene.setProgress(Number(timeInput.value) / 100);
+    scene.setProgress(Number(timeInput.value) / 1000);
   };
 
   const handleTimeCommit = () => {
@@ -127,13 +137,12 @@ function updateInspector(sample, { fromAutoplay = false } = {}) {
     return;
   }
 
-  if (!state.scrubbing && fromAutoplay) {
-    timeInput.value = String(Math.round(activeScene.progress * 100));
-  } else if (!fromAutoplay) {
-    timeInput.value = String(Math.round(activeScene.progress * 100));
+  if (!state.scrubbing || !fromAutoplay) {
+    timeInput.value = String(Math.round(activeScene.progress * 1000));
   }
 
   timeLabel.textContent = sample.hour.t.slice(0, 16).replace("T", " ");
+  updateMoment(sample);
 
   if (state.hoverKind === "cme" && sample.cme) {
     inspector.textContent = formatCme(sample.cme);
@@ -146,6 +155,18 @@ function updateInspector(sample, { fromAutoplay = false } = {}) {
   }
 
   inspector.textContent = formatHour(sample.hour, sample.cme);
+}
+
+function updateMoment(sample) {
+  const { phase, label } = describePhase(sample);
+  const phaseEl = document.getElementById("phase");
+  if (document.body.dataset.phase !== phase || phaseEl.textContent !== label) {
+    document.body.dataset.phase = phase;
+    phaseEl.textContent = label;
+  }
+  const moment = formatMoment(sample.hour.t);
+  const momentEl = document.getElementById("moment-time");
+  if (momentEl.textContent !== moment) momentEl.textContent = moment;
 }
 
 boot().catch((error) => {
