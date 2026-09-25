@@ -1,45 +1,128 @@
 import * as THREE from "three";
 
 const FILAMENTS = 30;
-const SEGMENTS = 96;
+const SEGMENTS = 128;
 const STREAKS = 14000;
 const DUST = 1400;
 const CME_RAYS = 42;
 const CME_SEGMENTS = 22;
 export const STREAM_LENGTH = 92;
 const UPSTREAM_X = -STREAM_LENGTH * 0.5;
-const _tangent = new THREE.Vector3();
-const _radial = new THREE.Vector3();
-const _side = new THREE.Vector3();
-const _up = new THREE.Vector3(0, 1, 0);
-const _a = new THREE.Vector3();
-const _b = new THREE.Vector3();
-const _color = new THREE.Color();
-const _indigo = new THREE.Color(0x2a3cff);
-const _cyan = new THREE.Color(0x5fe6ff);
-const _hot = new THREE.Color(0xffb35a);
-const _storm = new THREE.Color(0xff3d5e);
-const _gold = new THREE.Color(0xffd27a);
 const QUAD_ACROSS = [-1, 1, 1, -1, 1, -1];
 const QUAD_ALONG = [0, 0, 1, 0, 1, 1];
 
-// Soft-edged additive ribbon: bright core, feathered edges, pulses that
-// travel downstream so the filaments read as flowing plasma, not flat tape.
-const RIBBON_VERTEX = `
-  attribute vec3 rib;
-  varying vec3 vColor;
-  varying vec3 vRib;
-  void main() {
-    vColor = color;
-    vRib = rib;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+// Shared tail of both ribbon vertex shaders. Each shader defines
+// ribbonPoint(t) (the strip's centreline) and ribbonWidth(t); this turns the
+// centreline into a camera-independent ribbon by offsetting each vertex
+// sideways, perpendicular to the flow and to the stream axis.
+const RIBBON_EXTRUDE = `
+  vec3 extrude(float t, float across, float width) {
+    vec3 p = ribbonPoint(t);
+    vec3 tangent = ribbonPoint(t + 0.002) - ribbonPoint(t - 0.002);
+    tangent = dot(tangent, tangent) < 1e-10 ? vec3(1.0, 0.0, 0.0) : normalize(tangent);
+    vec3 radial = vec3(0.0, p.y, p.z);
+    radial = dot(radial, radial) < 1e-8 ? vec3(0.0, 1.0, 0.0) : normalize(radial);
+    vec3 side = cross(tangent, radial);
+    if (dot(side, side) < 1e-8) side = cross(tangent, vec3(0.0, 1.0, 0.0));
+    return p + normalize(side) * width * 0.5 * across;
   }
 `;
 
-const RIBBON_FRAGMENT = `
+// Filament centrelines are computed entirely on the GPU: the geometry is a
+// static strip of (across, along) coordinates uploaded once, and the vertex
+// shader bends it every frame from the solar-wind uniforms.
+const FILAMENT_VERTEX = `
+  attribute vec3 rib;
+  attribute vec4 strip;   // phase, radius, spin, width
+  attribute float sheath; // 1.0 for the wide, dim outer sheath ribbons
   varying vec3 vColor;
   varying vec3 vRib;
   uniform float uTime;
+  uniform float uDensity;
+  uniform float uSpeed;
+  uniform float uHeat;
+  uniform float uStorm;
+  uniform float uShock;
+  uniform float uBt;
+  uniform float uLength;
+  uniform vec3 uIndigo;
+  uniform vec3 uCyan;
+  uniform vec3 uHot;
+  uniform vec3 uStormColor;
+
+  vec3 ribbonPoint(float t) {
+    float phase = strip.x;
+    float breathe = 0.6 + uDensity * 0.5 + uStorm * 0.3 + sin(uTime * 0.9 + phase) * 0.06;
+    // Flared at the source, narrowing as the stream travels, then fanning
+    // out again downstream — gives the body a silhouette instead of a tube.
+    float envelope = 0.55 + pow(abs(t - 0.38) * 1.6, 1.4);
+    float turbulence = sin(t * 19.0 + uTime * 2.4 + phase * 3.0) * uStorm * 0.35;
+    float radius = strip.y * breathe * (envelope + sin(t * 7.5 + phase) * 0.12 + turbulence);
+    float twist = uTime * strip.z * (0.4 + uBt * 2.2);
+    float angle = phase + twist + t * (1.4 + uBt * 7.5);
+    float x = (t - 0.5) * uLength * (1.0 + uSpeed * 0.18);
+    return vec3(x, cos(angle) * radius, sin(angle) * radius);
+  }
+${RIBBON_EXTRUDE}
+  void main() {
+    float width = strip.w * (0.7 + uDensity * 0.6 + uStorm * 0.3) * mix(1.0, 2.2, sheath);
+    vec3 p = extrude(rib.y, rib.x, width);
+
+    vec3 c = mix(uIndigo, uCyan, mix(0.55 + uDensity * 0.3, 0.2, sheath));
+    c = mix(c, uHot, min(1.0, uHeat * 0.45 + uShock * 0.35));
+    c = mix(c, uStormColor, uStorm * mix(0.7, 0.95, sheath));
+    float shade = mix(0.75, 0.3, sheath) + uDensity * 0.2 + uStorm * 0.3;
+
+    vColor = c * shade;
+    vRib = rib;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  }
+`;
+
+// CME rays: Fibonacci-sphere spokes from the upstream source that grow with
+// eruption progress and scale with the CME's catalogued speed.
+const CME_VERTEX = `
+  attribute vec3 rib;
+  attribute vec4 strip;   // theta, angle, length, width
+  attribute float sheath; // launch delay (0..1) for staggered rays
+  varying vec3 vColor;
+  varying vec3 vRib;
+  uniform float uTime;
+  uniform float uProgress;
+  uniform float uStrength;
+  uniform float uSpeedScale;
+  uniform float uHeat;
+  uniform vec3 uGold;
+  uniform vec3 uHot;
+  uniform vec3 uOrigin;
+
+  float rayLength() {
+    float reach = clamp((uProgress - sheath * 0.25) * 1.4, 0.0, 1.0);
+    return strip.z * uSpeedScale * (0.2 + reach * 1.8);
+  }
+
+  vec3 ribbonPoint(float t) {
+    float d = 0.8 + t * rayLength();
+    float theta = strip.x + sin(t * 6.0 + uTime * 3.0 + strip.y) * 0.08 * t;
+    return uOrigin + vec3(cos(theta), sin(theta) * cos(strip.y), sin(theta) * sin(strip.y)) * d;
+  }
+${RIBBON_EXTRUDE}
+  void main() {
+    float t = rib.y;
+    float width = strip.w * (1.0 + uStrength * 1.4) * (1.0 - t * 0.6);
+    vec3 p = extrude(t, rib.x, width);
+    vColor = mix(uGold, uHot, uHeat * 0.4) * (1.0 - t) * (1.4 + uStrength * 2.2);
+    vRib = rib;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  }
+`;
+
+// Soft-edged additive ribbon: bright core, feathered edges, pulses that
+// travel downstream so the filaments read as flowing plasma, not flat tape.
+const RIBBON_FRAGMENT = `
+  varying vec3 vColor;
+  varying vec3 vRib;
+  uniform float uPulseTime;
   uniform float uOpacity;
   uniform float uFlow;
   uniform float uShock;
@@ -50,7 +133,7 @@ const RIBBON_FRAGMENT = `
     float across = abs(vRib.x);
     float core = exp(-across * across * 4.0);
     float edge = smoothstep(1.0, 0.35, across);
-    float phase = vRib.y * 14.0 - uTime * uFlow + vRib.z * 6.2831;
+    float phase = vRib.y * 14.0 - uPulseTime * uFlow + vRib.z * 6.2831;
     float pulse = pow(0.5 + 0.5 * sin(phase), 8.0);
     float ends = smoothstep(0.0, uEndFade, vRib.y) * smoothstep(1.0, 1.0 - uEndFade, vRib.y);
     float front = exp(-pow((vRib.y - uShockFront) * 11.0, 2.0)) * uShock;
@@ -202,8 +285,6 @@ export class PlasmaField {
     this.time = 0;
     this.sample = null;
     this.layers = { plasma: true, cme: true, storm: true };
-    this.filamentMeta = [];
-    this.cmeMeta = [];
     this.shockFront = 0;
     this.flash = 0;
     this.prevShock = 0;
@@ -241,70 +322,96 @@ export class PlasmaField {
     };
   }
 
-  createRibbonGeometry(strips, segments) {
+  // Static strip geometry: per-vertex (across, along, seed) plus the strip's
+  // own parameters. Nothing here is rewritten after creation — the vertex
+  // shader derives every position from these and the current uniforms.
+  createRibbonGeometry(stripMeta, segments) {
+    const strips = stripMeta.length;
     const vertexCount = strips * segments * 6;
-    const positions = new Float32Array(vertexCount * 3);
-    const colors = new Float32Array(vertexCount * 3);
     const rib = new Float32Array(vertexCount * 3);
+    const strip = new Float32Array(vertexCount * 4);
+    const flag = new Float32Array(vertexCount);
 
     for (let s = 0; s < strips; s += 1) {
       const stripSeed = (s * 0.618034) % 1;
+      const { params, flag: stripFlag } = stripMeta[s];
       for (let i = 0; i < segments; i += 1) {
         for (let v = 0; v < 6; v += 1) {
-          const index = ((s * segments + i) * 6 + v) * 3;
-          rib[index] = QUAD_ACROSS[v];
-          rib[index + 1] = (i + QUAD_ALONG[v]) / segments;
-          rib[index + 2] = stripSeed;
+          const vertex = (s * segments + i) * 6 + v;
+          rib[vertex * 3] = QUAD_ACROSS[v];
+          rib[vertex * 3 + 1] = (i + QUAD_ALONG[v]) / segments;
+          rib[vertex * 3 + 2] = stripSeed;
+          strip.set(params, vertex * 4);
+          flag[vertex] = stripFlag;
         }
       }
     }
 
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    // Three needs a position attribute to size the draw call; the shader
+    // ignores it.
+    geometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3)
+    );
     geometry.setAttribute("rib", new THREE.BufferAttribute(rib, 3));
-    return { geometry, positions, colors };
+    geometry.setAttribute("strip", new THREE.BufferAttribute(strip, 4));
+    geometry.setAttribute("sheath", new THREE.BufferAttribute(flag, 1));
+    return geometry;
   }
 
-  createRibbonMaterial(endFade) {
+  createRibbonMaterial({ vertexShader, endFade, uniforms }) {
     return additiveShader({
-      vertexColors: true,
       side: THREE.DoubleSide,
       uniforms: {
-        uTime: { value: 0 },
+        uPulseTime: { value: 0 },
         uOpacity: { value: 0.8 },
         uFlow: { value: 2 },
         uShock: { value: 0 },
         uShockFront: { value: -1 },
         uEndFade: { value: endFade },
+        ...uniforms,
       },
-      vertexShader: RIBBON_VERTEX,
+      vertexShader,
       fragmentShader: RIBBON_FRAGMENT,
     });
   }
 
   createFilaments() {
-    const { geometry, positions, colors } = this.createRibbonGeometry(
-      FILAMENTS,
-      SEGMENTS
-    );
-    this.filamentGeometry = geometry;
-    this.filamentPositions = positions;
-    this.filamentColors = colors;
-    this.filamentMaterial = this.createRibbonMaterial(0.12);
-    this.filaments = new THREE.Mesh(geometry, this.filamentMaterial);
-    this.filaments.frustumCulled = false;
-    this.group.add(this.filaments);
-
+    const meta = [];
     for (let i = 0; i < FILAMENTS; i += 1) {
-      this.filamentMeta.push({
-        phase: (i / FILAMENTS) * Math.PI * 2,
-        radius: 0.9 + ((i * 7) % 11) * 0.62,
-        spin: 0.18 + (i % 6) * 0.07,
-        width: 0.22 + (i % 5) * 0.09,
-        sheath: i % 5 === 0,
+      meta.push({
+        params: [
+          (i / FILAMENTS) * Math.PI * 2,
+          0.9 + ((i * 7) % 11) * 0.62,
+          0.18 + (i % 6) * 0.07,
+          0.22 + (i % 5) * 0.09,
+        ],
+        flag: i % 5 === 0 ? 1 : 0,
       });
     }
+
+    this.filamentGeometry = this.createRibbonGeometry(meta, SEGMENTS);
+    this.filamentMaterial = this.createRibbonMaterial({
+      vertexShader: FILAMENT_VERTEX,
+      endFade: 0.12,
+      uniforms: {
+        uTime: { value: 0 },
+        uDensity: { value: 0.2 },
+        uSpeed: { value: 0.2 },
+        uHeat: { value: 0.2 },
+        uStorm: { value: 0 },
+        uBt: { value: 0 },
+        uLength: { value: STREAM_LENGTH },
+        uIndigo: { value: new THREE.Color(0x2a3cff) },
+        uCyan: { value: new THREE.Color(0x5fe6ff) },
+        uHot: { value: new THREE.Color(0xffb35a) },
+        uStormColor: { value: new THREE.Color(0xff3d5e) },
+      },
+    });
+    this.filaments = new THREE.Mesh(this.filamentGeometry, this.filamentMaterial);
+    this.filaments.frustumCulled = false;
+    this.group.add(this.filaments);
   }
 
   createStreaks() {
@@ -358,30 +465,40 @@ export class PlasmaField {
   }
 
   createCmeBurst() {
-    const { geometry, positions, colors } = this.createRibbonGeometry(
-      CME_RAYS,
-      CME_SEGMENTS
-    );
-    this.cmeGeometry = geometry;
-    this.cmePositions = positions;
-    this.cmeColors = colors;
-    this.cmeMaterial = this.createRibbonMaterial(0.02);
-    this.cmeBurst = new THREE.Mesh(geometry, this.cmeMaterial);
-    this.cmeBurst.frustumCulled = false;
-    this.group.add(this.cmeBurst);
-
+    const meta = [];
     for (let i = 0; i < CME_RAYS; i += 1) {
       const u = (i + 0.5) / CME_RAYS;
-      this.cmeMeta.push({
+      meta.push({
         // Fibonacci sphere, biased downstream so the ejecta blooms toward
         // the stream instead of being a symmetric starburst.
-        theta: Math.acos(1 - 2 * u) * 0.8,
-        angle: i * 2.39996,
-        length: 6 + ((i * 5) % 9) * 1.6,
-        width: 0.16 + (i % 4) * 0.08,
-        delay: ((i * 3) % 7) / 7,
+        params: [
+          Math.acos(1 - 2 * u) * 0.8,
+          i * 2.39996,
+          6 + ((i * 5) % 9) * 1.6,
+          0.16 + (i % 4) * 0.08,
+        ],
+        flag: ((i * 3) % 7) / 7,
       });
     }
+
+    this.cmeGeometry = this.createRibbonGeometry(meta, CME_SEGMENTS);
+    this.cmeMaterial = this.createRibbonMaterial({
+      vertexShader: CME_VERTEX,
+      endFade: 0.02,
+      uniforms: {
+        uTime: { value: 0 },
+        uProgress: { value: 0 },
+        uStrength: { value: 0 },
+        uSpeedScale: { value: 1 },
+        uHeat: { value: 0 },
+        uGold: { value: new THREE.Color(0xffd27a) },
+        uHot: { value: new THREE.Color(0xffb35a) },
+        uOrigin: { value: new THREE.Vector3(UPSTREAM_X - 1.5, 0, 0) },
+      },
+    });
+    this.cmeBurst = new THREE.Mesh(this.cmeGeometry, this.cmeMaterial);
+    this.cmeBurst.frustumCulled = false;
+    this.group.add(this.cmeBurst);
 
     this.glowMaterial = additiveShader({
       uniforms: {
@@ -520,136 +637,40 @@ export class PlasmaField {
 
     const f = this.filamentMaterial.uniforms;
     f.uTime.value = this.time;
+    f.uPulseTime.value = this.time;
+    f.uDensity.value = density;
+    f.uSpeed.value = speed;
+    f.uHeat.value = heat;
+    f.uStorm.value = storm;
+    f.uBt.value = bt;
     f.uFlow.value = 1.2 + speed * 5;
     f.uShock.value = shock;
     f.uShockFront.value = this.shockFront;
     f.uOpacity.value = 0.32 + density * 0.12 + storm * 0.08;
 
-    this.updateFilaments(density, heat, storm, shock, speed, bt);
     this.updateCmeBurst(launch, heat);
     this.updateStormSheath(storm, shock, density);
   }
 
-  updateFilaments(density, heat, storm, shock, speed, bt) {
-    const positions = this.filamentPositions;
-    const colors = this.filamentColors;
-    let cursor = 0;
-
-    for (let f = 0; f < FILAMENTS; f += 1) {
-      const meta = this.filamentMeta[f];
-      const twist = this.time * meta.spin * (0.4 + bt * 2.2);
-      const width =
-        meta.width *
-        (0.7 + density * 0.6 + storm * 0.3) *
-        (meta.sheath ? 2.2 : 1);
-
-      _color.copy(_indigo).lerp(_cyan, meta.sheath ? 0.2 : 0.55 + density * 0.3);
-      _color.lerp(_hot, Math.min(1, heat * 0.45 + shock * 0.35));
-      _color.lerp(_storm, storm * (meta.sheath ? 0.95 : 0.7));
-      const shade = (meta.sheath ? 0.3 : 0.75) + density * 0.2 + storm * 0.3;
-      const r = _color.r * shade;
-      const g = _color.g * shade;
-      const b = _color.b * shade;
-
-      for (let i = 0; i < SEGMENTS; i += 1) {
-        const t0 = i / SEGMENTS;
-        const t1 = (i + 1) / SEGMENTS;
-        this.filamentPoint(_a, meta, t0, twist, density, storm, speed, bt);
-        this.filamentPoint(_b, meta, t1, twist, density, storm, speed, bt);
-        this.writeQuad(positions, cursor, _a, _b, width);
-
-        for (let v = 0; v < 6; v += 1) {
-          const colorIndex = (cursor + v) * 3;
-          colors[colorIndex] = r;
-          colors[colorIndex + 1] = g;
-          colors[colorIndex + 2] = b;
-        }
-        cursor += 6;
-      }
-    }
-
-    this.filamentGeometry.attributes.position.needsUpdate = true;
-    this.filamentGeometry.attributes.color.needsUpdate = true;
-  }
-
-  filamentPoint(target, meta, t, twist, density, storm, speed, bt) {
-    const x = (t - 0.5) * STREAM_LENGTH;
-    const breathe =
-      0.6 +
-      density * 0.5 +
-      storm * 0.3 +
-      Math.sin(this.time * 0.9 + meta.phase) * 0.06;
-    // Flared at the source, narrowing as the stream travels, then fanning
-    // out again downstream — gives the body a silhouette instead of a tube.
-    const envelope = 0.55 + Math.pow(Math.abs(t - 0.38) * 1.6, 1.4);
-    const turbulence =
-      Math.sin(t * 19 + this.time * 2.4 + meta.phase * 3) * storm * 0.35;
-    const radius =
-      meta.radius *
-      breathe *
-      (envelope + Math.sin(t * 7.5 + meta.phase) * 0.12 + turbulence);
-    const stretch = 1 + speed * 0.18;
-    const angle = meta.phase + twist + t * (1.4 + bt * 7.5);
-    target.set(x * stretch, Math.cos(angle) * radius, Math.sin(angle) * radius);
-  }
-
   updateCmeBurst(launch, heat) {
-    const positions = this.cmePositions;
-    const colors = this.cmeColors;
     const progress = this.eruption;
     const strength = launch * Math.max(0, 1 - Math.max(0, progress - 0.8) * 1.6);
-    let cursor = 0;
 
     const c = this.cmeMaterial.uniforms;
-    c.uTime.value = this.time * 2;
+    c.uTime.value = this.time;
+    c.uPulseTime.value = this.time * 2;
     c.uFlow.value = 6;
     c.uOpacity.value = Math.min(1, strength * 1.3);
+    c.uProgress.value = progress;
+    c.uStrength.value = strength;
+    c.uHeat.value = heat;
+    c.uSpeedScale.value =
+      0.6 + Math.min(1, (this.sample.cme?.speed ?? 600) / 2000) * 0.9;
     this.cmeBurst.visible = this.layers.cme !== false && strength > 0.02;
 
     this.glowMaterial.uniforms.uIntensity.value =
       0.25 + this.sample.speedN * 0.25 + strength * 3.2;
     this.glowMaterial.uniforms.uScale.value = 12 + strength * 18;
-
-    const speedScale = 0.6 + Math.min(1, (this.sample.cme?.speed ?? 600) / 2000) * 0.9;
-
-    for (let r = 0; r < CME_RAYS; r += 1) {
-      const meta = this.cmeMeta[r];
-      const reach = THREE.MathUtils.clamp((progress - meta.delay * 0.25) * 1.4, 0, 1);
-      const length = meta.length * speedScale * (0.2 + reach * 1.8);
-
-      _color.copy(_gold).lerp(_hot, heat * 0.4);
-      const shade = 1.4 + strength * 2.2;
-      for (let i = 0; i < CME_SEGMENTS; i += 1) {
-        const t0 = i / CME_SEGMENTS;
-        const t1 = (i + 1) / CME_SEGMENTS;
-        this.cmePoint(_a, meta, t0, length);
-        this.cmePoint(_b, meta, t1, length);
-        this.writeQuad(positions, cursor, _a, _b, meta.width * (1 + strength * 1.4) * (1 - t0 * 0.6));
-
-        const fade = (1 - t0) * shade;
-        for (let v = 0; v < 6; v += 1) {
-          const colorIndex = (cursor + v) * 3;
-          colors[colorIndex] = _color.r * fade;
-          colors[colorIndex + 1] = _color.g * fade;
-          colors[colorIndex + 2] = _color.b * fade;
-        }
-        cursor += 6;
-      }
-    }
-
-    this.cmeGeometry.attributes.position.needsUpdate = true;
-    this.cmeGeometry.attributes.color.needsUpdate = true;
-  }
-
-  cmePoint(target, meta, t, length) {
-    const d = 0.8 + t * length;
-    const wobble = Math.sin(t * 6 + this.time * 3 + meta.angle) * 0.08 * t;
-    const theta = meta.theta + wobble;
-    target.set(
-      UPSTREAM_X - 1.5 + Math.cos(theta) * d,
-      Math.sin(theta) * Math.cos(meta.angle) * d,
-      Math.sin(theta) * Math.sin(meta.angle) * d
-    );
   }
 
   updateStormSheath(storm, shock, density) {
@@ -665,37 +686,6 @@ export class PlasmaField {
     this.sheath.visible = this.layers.storm !== false && pulse > 0.02;
     this.stormHit.scale.setScalar(0.8 + pulse * 1.1);
     this.flareHit.scale.setScalar(0.7 + this.sample.launch * 1.4);
-  }
-
-  writeQuad(positions, cursor, a, b, width) {
-    _tangent.copy(b).sub(a);
-    if (_tangent.lengthSq() < 1e-8) {
-      _tangent.set(1, 0, 0);
-    } else {
-      _tangent.normalize();
-    }
-
-    _radial.set(0, a.y, a.z);
-    if (_radial.lengthSq() < 1e-6) {
-      _radial.set(0, 1, 0);
-    } else {
-      _radial.normalize();
-    }
-
-    _side.crossVectors(_tangent, _radial);
-    if (_side.lengthSq() < 1e-6) {
-      _side.crossVectors(_tangent, _up);
-    }
-    _side.normalize().multiplyScalar(width * 0.5);
-
-    let o = cursor * 3;
-    // a-, a+, b+, a-, b+, b-  (matches QUAD_ACROSS / QUAD_ALONG)
-    positions[o++] = a.x - _side.x; positions[o++] = a.y - _side.y; positions[o++] = a.z - _side.z;
-    positions[o++] = a.x + _side.x; positions[o++] = a.y + _side.y; positions[o++] = a.z + _side.z;
-    positions[o++] = b.x + _side.x; positions[o++] = b.y + _side.y; positions[o++] = b.z + _side.z;
-    positions[o++] = a.x - _side.x; positions[o++] = a.y - _side.y; positions[o++] = a.z - _side.z;
-    positions[o++] = b.x + _side.x; positions[o++] = b.y + _side.y; positions[o++] = b.z + _side.z;
-    positions[o++] = b.x - _side.x; positions[o++] = b.y - _side.y; positions[o++] = b.z - _side.z;
   }
 
   dispose() {
