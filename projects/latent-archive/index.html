@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Latent Archive, an interactive Three.js data sculpture in which 20,000 public-domain artworks from the Art Institute of Chicago dissolve into a dreaming cloud of pigment."
+    />
+    <meta name="theme-color" content="#020206" />
+    <title>Latent Archive</title>
+  </head>
+  <body>
+    <main id="stage" aria-label="Latent Archive 3D artwork" aria-describedby="keys">
+      <header class="title">
+        <p class="overline">Machine memory · Art Institute of Chicago</p>
+        <h1>Latent Archive</h1>
+        <p id="status" class="status" aria-live="polite">Recalling the collection…</p>
+        <p id="phase" class="phase" aria-live="polite"></p>
+      </header>
+
+      <aside id="inspector" class="inspector" aria-live="polite" aria-label="Artwork details" hidden>
+        <figure class="plate">
+          <div id="plate-mosaic" class="mosaic" aria-hidden="true"></div>
+          <img id="plate-image" alt="" decoding="async" hidden />
+        </figure>
+        <div class="caption">
+          <h2 id="work-title"></h2>
+          <p id="work-artist" class="artist"></p>
+          <p id="work-meta" class="meta"></p>
+          <a id="work-link" class="link" target="_blank" rel="noopener noreferrer">View at artic.edu <span aria-hidden="true">↗</span></a>
+        </div>
+      </aside>
+
+      <p class="hint" id="hint">Hover a light to recall a work · click to hold it · drag to orbit</p>
+
+      <section class="controls" aria-label="Controls">
+        <button id="pause" type="button" aria-pressed="false" aria-keyshortcuts="Space">Pause</button>
+        <button id="reset" type="button" aria-keyshortcuts="R">Reset</button>
+
+        <fieldset class="modes">
+          <legend>Memory state</legend>
+          <label><input type="radio" name="mode" value="auto" checked aria-keyshortcuts="1" /><span>Auto</span></label>
+          <label><input type="radio" name="mode" value="archive" aria-keyshortcuts="2" /><span>Archive</span></label>
+          <label><input type="radio" name="mode" value="latent" aria-keyshortcuts="3" /><span>Latent</span></label>
+          <label><input type="radio" name="mode" value="dream" aria-keyshortcuts="4" /><span>Dream</span></label>
+        </fieldset>
+
+        <div class="era">
+          <label for="era" id="era-label">All eras</label>
+          <input id="era" type="range" min="0" max="100" value="50" aria-describedby="era-label" />
+          <button id="era-all" type="button" class="ghost">All</button>
+        </div>
+      </section>
+
+      <p id="keys" class="sr-only">
+        Keyboard: Space pauses, R resets the view, 1 to 4 choose Auto, Archive, Latent or Dream,
+        arrow keys orbit, plus and minus zoom, Escape releases a held artwork.
+      </p>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
