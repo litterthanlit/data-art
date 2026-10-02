@@ -10,6 +10,8 @@
     "data": "node scripts/build-archive-data.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
     "three": "^0.164.1"
   },
   "devDependencies": {

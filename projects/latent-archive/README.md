@@ -36,6 +36,10 @@ Outputs:
 - **Latent**: every work becomes a feature vector: its 16 cells in CIELAB, the mean colour, the year rank, and a hashed classification. UMAP (`umap-js`, fixed seed) reduces these to 3D. Works with a similar look drift together, whatever their era.
 - **Archive**: a rising spiral. Year rank sets the height and the turn, department adds an angular offset, and lightness sets the radius.
 
+## Island labels
+
+The latent cloud is named at build time. A voxel flood fill finds the separated islands, and large islands are split further with seeded k-means (about one region per 1,800 works). Each region is titled by its most over-represented classification relative to the whole sample, with the dominant place and the p10–p90 year span as detail: for example *Woodblock prints, Japan · 1690 – 1890* or *Coins, Roman Empire · 330 BCE – 520*. The labels are stored in `latent-archive.json` under `islands`. On screen they appear only in the Latent state: the largest regions claim space first, overlapping labels are hidden, and the detail line shows when you zoom in or point near a region.
+
 ## Visual mapping
 
 - One artwork → a 4×4 mosaic of its own colours, always facing the viewer
@@ -49,7 +53,9 @@ Outputs:
 
 - Hover a light to recall a work. Click to hold it, and Escape to let it go.
 - Drag to orbit, scroll or pinch to zoom.
-- Keys: Space to pause, R to reset, 1–4 for Auto, Archive, Latent and Dream, arrow keys to orbit, `+` and `-` to zoom.
+- Keys: Space to pause, R to reset, 1–4 for Auto, Archive, Latent and Dream, L to toggle the island labels, arrow keys to orbit, `+` and `-` to zoom.
 - With `prefers-reduced-motion`, the auto-cycle stops on Latent, time slows, and the dream flow is capped.
+
+The UI uses Geist and Geist Mono (bundled through Fontsource, so no font CDN), on a Vercel-style dark token scale defined in `src/styles.css`.
 
 This is a data sculpture, not a collection browser.
