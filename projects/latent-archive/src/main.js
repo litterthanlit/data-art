@@ -1,19 +1,26 @@
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
 import "./styles.css";
 import { describeWork, loadArchive, MissingArchiveError } from "./archive/loadArchive.js";
 import { ArchiveScene } from "./scene/ArchiveScene.js";
-import { formatEra, formatMeta, formatStatus, imageUrl, workUrl } from "./ui/readouts.js";
+import { IslandLabels } from "./ui/IslandLabels.js";
+import { formatEra, formatYear, imageUrl, workUrl } from "./ui/readouts.js";
 
 const ERA_SPAN = 0.04; // each era window shows ±4% of the collection, by rank
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-const state = { paused: false, mode: "auto", era: null, held: null };
+const state = { paused: false, mode: "auto", era: null, held: null, labels: true };
 
 let activeScene = null;
+let islandLabels = null;
 let archive = null;
 let sortedYears = null;
 let cleanupControls = () => {};
 let bootRun = 0;
 let bootController = null;
 let imageTimer = null;
+let imageToken = 0;
+let imageFailures = 0;
+const IMAGE_GIVE_UP = 3; // stop asking the image host after repeated refusals
 
 async function boot() {
   const runId = ++bootRun;
@@ -21,13 +28,17 @@ async function boot() {
   const { signal } = bootController;
   const isStale = () => signal.aborted || runId !== bootRun;
 
-  const loaded = await loadArchive({ signal });
+  const loaded = await loadArchive({ signal, onProgress: showProgress });
   if (isStale()) return;
   archive = loaded;
   sortedYears = Int16Array.from(archive.years).sort();
 
   cleanupControls();
   activeScene?.dispose();
+  islandLabels?.dispose();
+  islandLabels = new IslandLabels(document.getElementById("islands"), archive.meta.islands);
+  islandLabels.setEnabled(state.labels);
+  const cycleFill = document.getElementById("cycle-fill");
 
   const scene = new ArchiveScene({
     stage: document.getElementById("stage"),
@@ -39,7 +50,13 @@ async function boot() {
       showWork(index);
     },
     onPhase: (_, info) => {
-      document.getElementById("phase").textContent = info.label;
+      const [name, description] = info.label.split(" — ");
+      document.getElementById("phase-name").textContent = name;
+      document.getElementById("phase").textContent = description;
+    },
+    onFrame: (frame) => {
+      islandLabels.update(scene, frame);
+      cycleFill.style.transform = `scaleX(${frame.cycle ?? 0})`;
     },
   });
   activeScene = scene;
@@ -51,7 +68,18 @@ async function boot() {
   cleanupControls = wireControls(scene);
   scene.start();
 
-  document.getElementById("status").textContent = formatStatus(archive);
+  const [first, last] = archive.meta.years;
+  document.getElementById("stat-works").textContent = archive.count.toLocaleString();
+  document.getElementById("stat-pigments").textContent = (archive.count * archive.cells).toLocaleString();
+  document.getElementById("stat-span").textContent = `${formatYear(first)} – ${formatYear(last)}`;
+  window.requestAnimationFrame(() => document.getElementById("loader").classList.add("is-done"));
+}
+
+function showProgress(fraction) {
+  const loader = document.getElementById("loader");
+  loader.classList.remove("is-indeterminate");
+  document.getElementById("loader-fill").style.transform = `scaleX(${fraction})`;
+  document.getElementById("loader-pct").textContent = `${Math.round(fraction * 100)}%`;
 }
 
 function wireControls(scene) {
@@ -60,11 +88,22 @@ function wireControls(scene) {
   const modeInputs = [...document.querySelectorAll('input[name="mode"]')];
   const eraInput = document.getElementById("era");
   const eraAll = document.getElementById("era-all");
+  const labelsInput = document.getElementById("labels");
+  const indicator = document.querySelector(".segmented-indicator");
 
   const updatePause = () => {
     scene.setPaused(state.paused);
-    pauseButton.textContent = state.paused ? "Resume" : "Pause";
+    pauseButton.setAttribute("aria-label", state.paused ? "Resume" : "Pause");
     pauseButton.setAttribute("aria-pressed", String(state.paused));
+  };
+
+  // Slide the segmented control's pill under the checked option.
+  const moveIndicator = () => {
+    // Measure the <label>: the inner span's offsetParent is the label itself.
+    const checked = modeInputs.find((input) => input.checked)?.parentElement;
+    if (!checked) return;
+    indicator.style.width = `${checked.offsetWidth}px`;
+    indicator.style.transform = `translateX(${checked.offsetLeft}px)`;
   };
 
   const setMode = (mode) => {
@@ -73,6 +112,13 @@ function wireControls(scene) {
       input.checked = input.value === mode;
     });
     scene.setMode(mode);
+    moveIndicator();
+  };
+
+  const setLabels = (value) => {
+    state.labels = value;
+    labelsInput.checked = value;
+    islandLabels.setEnabled(value);
   };
 
   const setEra = (window) => {
@@ -91,6 +137,8 @@ function wireControls(scene) {
     mode: (event) => setMode(event.target.value),
     era: () => setEra(eraWindow(Number(eraInput.value) / 100)),
     eraAll: () => setEra(null),
+    labels: () => setLabels(labelsInput.checked),
+    resize: moveIndicator,
     motion: () => scene.setReducedMotion(reducedMotionQuery.matches),
     key: (event) => {
       if (event.target.closest?.("input[type=range]") && event.key.startsWith("Arrow")) return;
@@ -107,6 +155,8 @@ function wireControls(scene) {
         "+": () => scene.zoomBy(0.88),
         "=": () => scene.zoomBy(0.88),
         "-": () => scene.zoomBy(1.14),
+        l: () => setLabels(!state.labels),
+        L: () => setLabels(!state.labels),
       };
       if (event.key in modes) {
         setMode(modes[event.key]);
@@ -123,12 +173,16 @@ function wireControls(scene) {
   modeInputs.forEach((input) => input.addEventListener("change", handlers.mode));
   eraInput.addEventListener("input", handlers.era);
   eraAll.addEventListener("click", handlers.eraAll);
+  labelsInput.addEventListener("change", handlers.labels);
+  window.addEventListener("resize", handlers.resize);
+  document.fonts?.ready.then(moveIndicator);
   reducedMotionQuery.addEventListener("change", handlers.motion);
   window.addEventListener("keydown", handlers.key);
 
   updatePause();
   setMode(state.mode);
   setEra(state.era);
+  setLabels(state.labels);
 
   return () => {
     pauseButton.removeEventListener("click", handlers.pause);
@@ -136,6 +190,8 @@ function wireControls(scene) {
     modeInputs.forEach((input) => input.removeEventListener("change", handlers.mode));
     eraInput.removeEventListener("input", handlers.era);
     eraAll.removeEventListener("click", handlers.eraAll);
+    labelsInput.removeEventListener("change", handlers.labels);
+    window.removeEventListener("resize", handlers.resize);
     reducedMotionQuery.removeEventListener("change", handlers.motion);
     window.removeEventListener("keydown", handlers.key);
   };
@@ -163,25 +219,59 @@ function showWork(index) {
   const work = describeWork(archive, index);
   inspector.hidden = false;
   inspector.classList.toggle("is-held", state.held === index);
+  document.getElementById("work-held").hidden = state.held !== index;
   hint.hidden = true;
 
   document.getElementById("work-title").textContent = work.title;
   document.getElementById("work-artist").textContent = work.artist;
-  document.getElementById("work-meta").textContent = formatMeta(work);
+  setFact("work-date", work.date);
+  setFact("work-place", work.place);
+  setFact("work-dept", work.department);
   document.getElementById("work-link").href = workUrl(work);
   paintMosaic(index);
 
   // The 16 pigments show instantly; the real image arrives only if the gaze lingers.
+  // AIC's image host sits behind a Cloudflare challenge that <img> cannot pass, so a
+  // failure is expected: the plate then shows the machine's 16-colour memory instead.
   const image = document.getElementById("plate-image");
+  const token = ++imageToken;
   image.hidden = true;
   image.onload = null;
+  image.onerror = null;
+
+  if (imageFailures >= IMAGE_GIVE_UP) {
+    setPlate("unavailable");
+    return;
+  }
+
+  setPlate("loading");
   imageTimer = window.setTimeout(() => {
-    image.onload = () => {
-      image.hidden = false;
+    const done = (ok) => {
+      if (token !== imageToken) return; // a newer hover owns the plate
+      imageFailures = ok ? 0 : imageFailures + 1;
+      image.hidden = !ok;
+      setPlate(ok ? "loaded" : "unavailable");
     };
+    image.onload = () => done(image.naturalWidth > 0);
+    image.onerror = () => done(false);
     image.alt = `${work.title}, ${work.artist}`;
-    image.src = imageUrl(work);
+    const src = imageUrl(work);
+    if (image.src === src && image.complete) {
+      done(image.naturalWidth > 0); // same image again: no new load event fires
+    } else {
+      image.src = src;
+    }
   }, state.held === index ? 0 : 220);
+}
+
+function setFact(id, value) {
+  const node = document.getElementById(id);
+  node.textContent = value || "";
+  node.parentElement.hidden = !value;
+}
+
+function setPlate(status) {
+  document.getElementById("plate").dataset.state = status;
 }
 
 function paintMosaic(index) {
@@ -200,7 +290,10 @@ function paintMosaic(index) {
 boot().catch((error) => {
   if (error.name === "AbortError") return;
   document.body.classList.add("has-error");
-  document.getElementById("status").textContent =
+  document.getElementById("loader").classList.add("is-done");
+  const status = document.getElementById("status");
+  status.hidden = false;
+  status.textContent =
     error instanceof MissingArchiveError ? error.message : `Could not recall the archive: ${error.message}`;
 });
 
@@ -211,5 +304,6 @@ if (import.meta.hot) {
     cleanupControls();
     activeScene?.dispose();
     activeScene = null;
+    islandLabels?.dispose();
   });
 }

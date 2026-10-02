@@ -22,13 +22,16 @@ const AUTO_SEQUENCE = [
 const PICK_RADIUS_PX = 16;
 
 export class ArchiveScene {
-  constructor({ stage, onHover = () => {}, onSelect = () => {}, onPhase = () => {} }) {
+  constructor({ stage, onHover = () => {}, onSelect = () => {}, onPhase = () => {}, onFrame = () => {} }) {
     if (!stage) throw new Error("Scene stage is missing");
 
     this.stage = stage;
     this.onHover = onHover;
     this.onSelect = onSelect;
     this.onPhase = onPhase;
+    this.onFrame = onFrame;
+    this.clipMatrix = new THREE.Matrix4();
+    this.viewport = { width: 1, height: 1 };
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(46, 1, 0.1, 1000);
     this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: "high-performance" });
@@ -141,11 +144,41 @@ export class ArchiveScene {
     u.uMorph.value = this.morph;
     u.uDream.value = this.dream;
 
+    this.updateClipMatrix();
     if (this.pointerDirty) {
       this.pointerDirty = false;
       this.updateHover();
     }
+    this.onFrame({
+      morph: this.morph,
+      dream: this.dream,
+      zoom: this.camera.position.z,
+      cycle: this.cycleProgress(),
+    });
     this.render();
+  }
+
+  // 0…1 through the current auto-cycle hold, or null when not cycling.
+  cycleProgress() {
+    if (this.mode !== "auto" || this.reducedMotion) return null;
+    return Math.min(1, this.autoElapsed / AUTO_SEQUENCE[this.autoIndex][1]);
+  }
+
+  updateClipMatrix() {
+    this.camera.updateMatrixWorld();
+    this.clipMatrix
+      .multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse)
+      .multiply(this.organism.matrixWorld);
+  }
+
+  // Organism-space point → CSS pixels on the canvas; w is the clip depth (≤ 0.1 = behind).
+  project(x, y, z, out) {
+    const e = this.clipMatrix.elements;
+    const w = e[3] * x + e[7] * y + e[11] * z + e[15];
+    out.w = w;
+    out.x = ((e[0] * x + e[4] * y + e[8] * z + e[12]) / w * 0.5 + 0.5) * this.viewport.width;
+    out.y = (1 - ((e[1] * x + e[5] * y + e[9] * z + e[13]) / w * 0.5 + 0.5)) * this.viewport.height;
+    return out;
   }
 
   advanceDirector(delta) {
@@ -239,28 +272,22 @@ export class ArchiveScene {
     if (!this.archive || !this.pointerClient || this.activePointers.size > 0) return null;
     if (this.dream > 0.45) return null; // pigment is scattered; anchors no longer match
 
-    const { width, height, x, y } = this.pointerClient;
-    const matrix = new THREE.Matrix4().multiplyMatrices(
-      this.camera.projectionMatrix,
-      this.camera.matrixWorldInverse
-    ).multiply(this.organism.matrixWorld);
-    const e = matrix.elements;
+    const { x, y } = this.pointerClient;
     const years = this.archive.years;
     const era = this.era;
+    const screen = { x: 0, y: 0, w: 0 };
     let best = null;
     let bestScore = PICK_RADIUS_PX * PICK_RADIUS_PX;
 
     for (let i = 0; i < this.archive.count; i += 1) {
       if (era && (years[i] < era[0] || years[i] > era[1])) continue;
       const p = this.field.anchorOf(i, this.morph, this.scratch);
-      const w = e[3] * p.x + e[7] * p.y + e[11] * p.z + e[15];
-      if (w <= 0.1) continue;
-      const sx = ((e[0] * p.x + e[4] * p.y + e[8] * p.z + e[12]) / w * 0.5 + 0.5) * width;
-      const sy = (1 - ((e[1] * p.x + e[5] * p.y + e[9] * p.z + e[13]) / w * 0.5 + 0.5)) * height;
-      const dx = sx - x;
-      const dy = sy - y;
+      this.project(p.x, p.y, p.z, screen);
+      if (screen.w <= 0.1) continue;
+      const dx = screen.x - x;
+      const dy = screen.y - y;
       // Prefer nearer works when several overlap under the cursor.
-      const score = dx * dx + dy * dy + w * 0.02;
+      const score = dx * dx + dy * dy + screen.w * 0.02;
       if (score < bestScore) {
         bestScore = score;
         best = i;
@@ -381,6 +408,7 @@ export class ArchiveScene {
     this.camera.fov = width < height ? 62 : 46;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
+    this.viewport = { width, height };
     this.field.uniforms.uViewScale.value = height / 900;
     this.composer.setSize(width, height);
     this.bloom.setSize(Math.round(width / 2), Math.round(height / 2));

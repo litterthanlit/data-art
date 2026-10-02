@@ -52,7 +52,8 @@ async function main() {
 
   const latent = await embed(sample);
   const helix = timeHelix(sample);
-  await writeOutputs(sample, latent, helix);
+  const islands = nameIslands(sample, latent);
+  await writeOutputs(sample, latent, helix, islands);
 }
 
 /* ------------------------------------------------------------------ fetch */
@@ -307,9 +308,194 @@ function timeHelix(sample) {
   });
 }
 
+/* ---------------------------------------------------------------- islands */
+
+const ISLAND_VOXEL = 2.2; // flood-fill cell size for finding separated islands
+const ISLAND_WORKS_PER_LABEL = 1800;
+const ISLAND_MIN_SHARE = 0.015;
+const UNCOUNTABLE = new Set([
+  "chalk", "graphite", "earthenware", "porcelain", "stoneware", "glass", "silver",
+  "metalwork", "photography", "ceramics", "furniture", "jewelry", "lace", "pastel",
+  "watercolor", "ink", "charcoal", "gouache", "sculpture",
+]);
+const RENAME = new Map([["ink or chalk wash", "ink washes"]]);
+
+// Separated islands come from a voxel flood fill; large islands are then split
+// with seeded k-means so each label can be specific. Every region is named by its
+// most over-represented classification ("lift" against the whole sample).
+function nameIslands(sample, latent) {
+  const n = latent.length;
+  const globalClass = shares(sample.map((work) => work.classification));
+  const regions = [];
+
+  connectedIslands(latent).forEach((members, island) => {
+    if (members.length < n * ISLAND_MIN_SHARE) return;
+    const k = Math.max(1, Math.round(members.length / ISLAND_WORKS_PER_LABEL));
+    const groups = kmeans(members, latent, k, SEED + 2 + island);
+    const named = groups
+      .filter((group) => group.length >= n * ISLAND_MIN_SHARE)
+      .map((group) => ({ members: group, title: titleFor(group.map((i) => sample[i]), globalClass) }));
+
+    // Neighbouring clusters with the same name read as one region.
+    const merged = new Map();
+    for (const region of named) {
+      const existing = merged.get(region.title);
+      if (existing) existing.members.push(...region.members);
+      else merged.set(region.title, region);
+    }
+    regions.push(...merged.values());
+  });
+
+  const islands = regions.map(({ members, title }) => {
+    const works = members.map((i) => sample[i]);
+    const center = [0, 1, 2].map((axis) => members.reduce((sum, i) => sum + latent[i][axis], 0) / members.length);
+    const [place, placeShare] = topEntry(shares(works.map((work) => work.place)));
+    const years = works.map((work) => work.year).sort((a, b) => a - b);
+    const span = `${formatYear(roundDecade(years[Math.floor(years.length * 0.1)]))} – ${formatYear(roundDecade(years[Math.floor(years.length * 0.9)]))}`;
+    const radius = Math.sqrt(members.reduce((sum, i) => sum + sqDist(latent[i], center), 0) / members.length);
+    return {
+      center: center.map((value) => Number(value.toFixed(2))),
+      radius: Number(radius.toFixed(2)),
+      count: members.length,
+      title,
+      detail: placeShare >= 0.3 ? `${place} · ${span}` : span,
+    };
+  });
+
+  islands.sort((a, b) => b.count - a.count);
+  for (const island of islands) {
+    console.log(`  island ${String(island.count).padStart(5)}  ${island.title} — ${island.detail}`);
+  }
+  return islands;
+}
+
+function titleFor(works, globalClass) {
+  const ranked = [...shares(works.map((work) => work.classification))]
+    .map(([name, share]) => ({ name, share, lift: share / (globalClass.get(name) || 1) }))
+    .filter((entry) => entry.share >= 0.1)
+    .sort((a, b) => b.lift * Math.sqrt(b.share) - a.lift * Math.sqrt(a.share));
+  if (!ranked.length) return topEntry(shares(works.map((work) => work.department)))[0];
+  if (ranked[0].share >= 0.2 || ranked.length === 1) return plural(ranked[0].name);
+  return `${plural(ranked[0].name)} & ${plural(ranked[1].name).toLowerCase()}`;
+}
+
+function connectedIslands(latent) {
+  const cells = new Map();
+  latent.forEach((point, i) => {
+    const key = point.map((value) => Math.floor(value / ISLAND_VOXEL)).join(",");
+    if (!cells.has(key)) cells.set(key, []);
+    cells.get(key).push(i);
+  });
+
+  const seen = new Set();
+  const islands = [];
+  for (const start of cells.keys()) {
+    if (seen.has(start)) continue;
+    seen.add(start);
+    const stack = [start];
+    const members = [];
+    while (stack.length) {
+      const key = stack.pop();
+      members.push(...cells.get(key));
+      const [x, y, z] = key.split(",").map(Number);
+      for (let dx = -1; dx <= 1; dx += 1) {
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (let dz = -1; dz <= 1; dz += 1) {
+            const next = `${x + dx},${y + dy},${z + dz}`;
+            if (cells.has(next) && !seen.has(next)) {
+              seen.add(next);
+              stack.push(next);
+            }
+          }
+        }
+      }
+    }
+    islands.push(members);
+  }
+  return islands.sort((a, b) => b.length - a.length);
+}
+
+// Seeded k-means++ over a subset of points; returns member index lists.
+function kmeans(members, latent, k, seed) {
+  if (k <= 1) return [members];
+  const random = mulberry32(seed);
+  const centers = [latent[members[Math.floor(random() * members.length)]].slice()];
+  const dist = new Float64Array(members.length).fill(Infinity);
+  while (centers.length < k) {
+    const last = centers[centers.length - 1];
+    let total = 0;
+    members.forEach((i, j) => {
+      dist[j] = Math.min(dist[j], sqDist(latent[i], last));
+      total += dist[j];
+    });
+    let pick = random() * total;
+    let chosen = members.length - 1;
+    for (let j = 0; j < members.length; j += 1) {
+      pick -= dist[j];
+      if (pick <= 0) {
+        chosen = j;
+        break;
+      }
+    }
+    centers.push(latent[members[chosen]].slice());
+  }
+
+  let groups = [];
+  for (let iter = 0; iter < 30; iter += 1) {
+    groups = centers.map(() => []);
+    for (const i of members) {
+      let best = 0;
+      let bestD = Infinity;
+      centers.forEach((center, c) => {
+        const d = sqDist(latent[i], center);
+        if (d < bestD) {
+          bestD = d;
+          best = c;
+        }
+      });
+      groups[best].push(i);
+    }
+    groups.forEach((group, c) => {
+      if (!group.length) return;
+      centers[c] = [0, 1, 2].map((axis) => group.reduce((sum, i) => sum + latent[i][axis], 0) / group.length);
+    });
+  }
+  return groups.filter((group) => group.length);
+}
+
+function shares(values) {
+  const counts = new Map();
+  for (const value of values) if (value) counts.set(value, (counts.get(value) || 0) + 1);
+  const total = values.length || 1;
+  return new Map([...counts].map(([key, count]) => [key, count / total]).sort((a, b) => b[1] - a[1]));
+}
+
+function topEntry(map) {
+  return map.entries().next().value ?? ["", 0];
+}
+
+function plural(term) {
+  const lower = RENAME.get(term.toLowerCase()) ?? term.toLowerCase();
+  const text = UNCOUNTABLE.has(lower) || /s$/.test(lower) ? lower : lower.replace(/y$/, "ie") + "s";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function roundDecade(year) {
+  return Math.round(year / 10) * 10;
+}
+
+function formatYear(year) {
+  if (year === 0) return "1 CE";
+  return year < 0 ? `${Math.abs(year)} BCE` : String(year);
+}
+
+function sqDist(a, b) {
+  return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+}
+
 /* ---------------------------------------------------------------- outputs */
 
-async function writeOutputs(sample, latent, helix) {
+async function writeOutputs(sample, latent, helix, islands) {
   await mkdir(OUT_DIR, { recursive: true });
   const count = sample.length;
   const header = 16;
@@ -350,6 +536,7 @@ async function writeOutputs(sample, latent, helix) {
     grid: GRID,
     years: [sample[0].year, sample[count - 1].year],
     departments,
+    islands,
     works: {
       id: sample.map((work) => work.id),
       title: sample.map((work) => work.title),

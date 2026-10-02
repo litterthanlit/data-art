@@ -7,55 +7,112 @@
       name="description"
       content="Latent Archive, an interactive Three.js data sculpture in which 20,000 public-domain artworks from the Art Institute of Chicago dissolve into a dreaming cloud of pigment."
     />
-    <meta name="theme-color" content="#020206" />
+    <meta name="theme-color" content="#0a0a0a" />
     <title>Latent Archive</title>
   </head>
   <body>
     <main id="stage" aria-label="Latent Archive 3D artwork" aria-describedby="keys">
+      <div id="loader" class="loader is-indeterminate" role="status" aria-live="polite">
+        <span class="loader-label">Recalling the collection</span>
+        <span class="loader-track"><span id="loader-fill" class="loader-fill"></span></span>
+        <span id="loader-pct" class="loader-pct">0%</span>
+      </div>
+
+      <div id="islands" class="islands" aria-hidden="true"></div>
+
       <header class="title">
-        <p class="overline">Machine memory · Art Institute of Chicago</p>
+        <p class="crumbs"><span>data-art</span><span aria-hidden="true">/</span><span>latent-archive</span></p>
         <h1>Latent Archive</h1>
-        <p id="status" class="status" aria-live="polite">Recalling the collection…</p>
-        <p id="phase" class="phase" aria-live="polite"></p>
+        <dl class="stats">
+          <div><dt>Works</dt><dd id="stat-works">—</dd></div>
+          <div><dt>Pigments</dt><dd id="stat-pigments">—</dd></div>
+          <div><dt>Span</dt><dd id="stat-span">—</dd></div>
+        </dl>
+        <p class="phase-pill" aria-live="polite">
+          <span class="pulse" aria-hidden="true"></span>
+          <span id="phase-name" class="phase-name">Loading</span>
+          <span id="phase" class="phase-desc"></span>
+        </p>
+        <p id="status" class="status" hidden></p>
       </header>
 
       <aside id="inspector" class="inspector" aria-live="polite" aria-label="Artwork details" hidden>
-        <figure class="plate">
+        <figure id="plate" class="plate" data-state="loading">
           <div id="plate-mosaic" class="mosaic" aria-hidden="true"></div>
-          <img id="plate-image" alt="" decoding="async" hidden />
+          <img id="plate-image" alt="" decoding="async" referrerpolicy="no-referrer" hidden />
+          <figcaption class="plate-note">A 16-colour memory · image held by the museum</figcaption>
         </figure>
         <div class="caption">
-          <h2 id="work-title"></h2>
+          <div class="caption-head">
+            <h2 id="work-title"></h2>
+            <span id="work-held" class="badge" hidden>Held</span>
+          </div>
           <p id="work-artist" class="artist"></p>
-          <p id="work-meta" class="meta"></p>
-          <a id="work-link" class="link" target="_blank" rel="noopener noreferrer">View at artic.edu <span aria-hidden="true">↗</span></a>
+          <dl class="facts">
+            <div><dt>Date</dt><dd id="work-date"></dd></div>
+            <div><dt>Place</dt><dd id="work-place"></dd></div>
+            <div><dt>Dept</dt><dd id="work-dept"></dd></div>
+          </dl>
+          <a id="work-link" class="button-secondary" target="_blank" rel="noopener noreferrer">
+            View at artic.edu <span aria-hidden="true">↗</span>
+          </a>
         </div>
       </aside>
 
-      <p class="hint" id="hint">Hover a light to recall a work · click to hold it · drag to orbit</p>
+      <p class="hint" id="hint">Hover a light to recall a work · click to hold · drag to orbit</p>
 
-      <section class="controls" aria-label="Controls">
-        <button id="pause" type="button" aria-pressed="false" aria-keyshortcuts="Space">Pause</button>
-        <button id="reset" type="button" aria-keyshortcuts="R">Reset</button>
+      <section class="dock" aria-label="Controls">
+        <span class="cycle" aria-hidden="true"><span id="cycle-fill" class="cycle-fill"></span></span>
 
-        <fieldset class="modes">
+        <div class="dock-group">
+          <button id="pause" class="icon-button" type="button" aria-label="Pause" aria-pressed="false" aria-keyshortcuts="Space">
+            <svg class="icon-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="2.5" height="10" rx="0.75" /><rect x="9.5" y="3" width="2.5" height="10" rx="0.75" /></svg>
+            <svg class="icon-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.4v9.2a.6.6 0 0 0 .9.5l7.3-4.6a.6.6 0 0 0 0-1L5.9 2.9a.6.6 0 0 0-.9.5Z" /></svg>
+          </button>
+          <button id="reset" class="icon-button" type="button" aria-label="Reset view" aria-keyshortcuts="R">
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.75 8a5.25 5.25 0 1 0 1.6-3.77" /><path d="M2.5 2.75v2.5H5" /></svg>
+          </button>
+        </div>
+
+        <span class="divider" aria-hidden="true"></span>
+
+        <fieldset class="segmented">
           <legend>Memory state</legend>
+          <span class="segmented-indicator" aria-hidden="true"></span>
           <label><input type="radio" name="mode" value="auto" checked aria-keyshortcuts="1" /><span>Auto</span></label>
           <label><input type="radio" name="mode" value="archive" aria-keyshortcuts="2" /><span>Archive</span></label>
           <label><input type="radio" name="mode" value="latent" aria-keyshortcuts="3" /><span>Latent</span></label>
           <label><input type="radio" name="mode" value="dream" aria-keyshortcuts="4" /><span>Dream</span></label>
         </fieldset>
 
+        <span class="divider" aria-hidden="true"></span>
+
+        <label class="switch">
+          <input id="labels" type="checkbox" role="switch" checked aria-keyshortcuts="L" />
+          <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+          <span>Labels</span>
+        </label>
+
+        <span class="divider" aria-hidden="true"></span>
+
         <div class="era">
-          <label for="era" id="era-label">All eras</label>
-          <input id="era" type="range" min="0" max="100" value="50" aria-describedby="era-label" />
-          <button id="era-all" type="button" class="ghost">All</button>
+          <label for="era" id="era-label" class="era-label">All eras</label>
+          <input id="era" type="range" min="0" max="100" value="50" />
+          <button id="era-all" type="button" class="chip">All</button>
         </div>
+
+        <p class="kbd-hints" aria-hidden="true">
+          <span><kbd>␣</kbd> pause</span>
+          <span><kbd>1</kbd>–<kbd>4</kbd> state</span>
+          <span><kbd>L</kbd> labels</span>
+          <span><kbd>R</kbd> reset</span>
+          <span><kbd>Esc</kbd> release</span>
+        </p>
       </section>
 
       <p id="keys" class="sr-only">
         Keyboard: Space pauses, R resets the view, 1 to 4 choose Auto, Archive, Latent or Dream,
-        arrow keys orbit, plus and minus zoom, Escape releases a held artwork.
+        L toggles region labels, arrow keys orbit, plus and minus zoom, Escape releases a held artwork.
       </p>
     </main>
 
