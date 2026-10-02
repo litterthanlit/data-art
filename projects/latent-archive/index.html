@@ -20,9 +20,10 @@
       </header>
 
       <aside id="inspector" class="inspector" aria-live="polite" aria-label="Artwork details" hidden>
-        <figure class="plate">
+        <figure id="plate" class="plate" data-state="loading">
           <div id="plate-mosaic" class="mosaic" aria-hidden="true"></div>
-          <img id="plate-image" alt="" decoding="async" hidden />
+          <img id="plate-image" alt="" decoding="async" referrerpolicy="no-referrer" hidden />
+          <figcaption class="plate-note">A 16-colour memory · image held by the museum</figcaption>
         </figure>
         <div class="caption">
           <h2 id="work-title"></h2>

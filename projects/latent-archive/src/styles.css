@@ -155,6 +155,55 @@ input {
   display: grid;
   filter: blur(14px) saturate(1.1);
   transform: scale(1.15);
+  transition: filter 520ms ease, transform 520ms ease, gap 520ms ease;
+}
+
+.mosaic span {
+  transition: border-radius 520ms ease;
+}
+
+.plate[data-state="loading"] .mosaic {
+  animation: recall 1.6s ease-in-out infinite alternate;
+}
+
+.plate[data-state="loaded"] .mosaic {
+  opacity: 0;
+}
+
+/* The image host refused: resolve the blur into the 4×4 memory itself. */
+.plate[data-state="unavailable"] .mosaic {
+  /* Square inside the 4:3 plate: side = plate height (75% of width) minus padding. */
+  inset: 18px 0 auto;
+  width: calc(75% - 56px);
+  height: auto;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  gap: 3px;
+  filter: none;
+  transform: none;
+}
+
+.plate[data-state="unavailable"] .mosaic span {
+  border-radius: 2px;
+}
+
+.plate-note {
+  position: absolute;
+  right: 0;
+  bottom: 12px;
+  left: 0;
+  margin: 0;
+  color: var(--faint);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 400ms ease 200ms;
+}
+
+.plate[data-state="unavailable"] .plate-note {
+  opacity: 1;
 }
 
 .plate img {
@@ -340,6 +389,12 @@ input {
   }
 }
 
+@keyframes recall {
+  to {
+    filter: blur(10px) saturate(1.25);
+  }
+}
+
 @keyframes develop {
   from {
     opacity: 0;
@@ -364,6 +419,18 @@ input {
 
   .plate {
     aspect-ratio: 1;
+  }
+
+  .plate[data-state="unavailable"] .mosaic {
+    inset: 10px;
+    width: auto;
+    height: auto;
+    aspect-ratio: auto;
+    gap: 2px;
+  }
+
+  .plate-note {
+    display: none;
   }
 
   .caption {

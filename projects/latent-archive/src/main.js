@@ -14,6 +14,9 @@ let cleanupControls = () => {};
 let bootRun = 0;
 let bootController = null;
 let imageTimer = null;
+let imageToken = 0;
+let imageFailures = 0;
+const IMAGE_GIVE_UP = 3; // stop asking the image host after repeated refusals
 
 async function boot() {
   const runId = ++bootRun;
@@ -172,16 +175,41 @@ function showWork(index) {
   paintMosaic(index);
 
   // The 16 pigments show instantly; the real image arrives only if the gaze lingers.
+  // AIC's image host sits behind a Cloudflare challenge that <img> cannot pass, so a
+  // failure is expected: the plate then shows the machine's 16-colour memory instead.
   const image = document.getElementById("plate-image");
+  const token = ++imageToken;
   image.hidden = true;
   image.onload = null;
+  image.onerror = null;
+
+  if (imageFailures >= IMAGE_GIVE_UP) {
+    setPlate("unavailable");
+    return;
+  }
+
+  setPlate("loading");
   imageTimer = window.setTimeout(() => {
-    image.onload = () => {
-      image.hidden = false;
+    const done = (ok) => {
+      if (token !== imageToken) return; // a newer hover owns the plate
+      imageFailures = ok ? 0 : imageFailures + 1;
+      image.hidden = !ok;
+      setPlate(ok ? "loaded" : "unavailable");
     };
+    image.onload = () => done(image.naturalWidth > 0);
+    image.onerror = () => done(false);
     image.alt = `${work.title}, ${work.artist}`;
-    image.src = imageUrl(work);
+    const src = imageUrl(work);
+    if (image.src === src && image.complete) {
+      done(image.naturalWidth > 0); // same image again: no new load event fires
+    } else {
+      image.src = src;
+    }
   }, state.held === index ? 0 : 220);
+}
+
+function setPlate(status) {
+  document.getElementById("plate").dataset.state = status;
 }
 
 function paintMosaic(index) {
