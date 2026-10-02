@@ -38,6 +38,7 @@ const TARGET = Number(process.env.ARCHIVE_TARGET || 20000);
 const GRID = 4;
 const CELLS = GRID * GRID;
 const SEED = 1917;
+const YEAR_RANGE = [-8000, 2030]; // AIC has a few corrupt date_start values (e.g. 1486490)
 
 async function main() {
   const refresh = process.argv.includes("--refresh");
@@ -158,7 +159,7 @@ async function search(payload, attempt = 0) {
 
 function compactWork(item) {
   const lqip = item.thumbnail?.lqip;
-  if (!lqip || !item.image_id || !Number.isFinite(item.date_start)) return null;
+  if (!lqip || !item.image_id || !plausibleYear(item.date_start)) return null;
 
   const grid = decodeMiniature(lqip);
   if (!grid) return null;
@@ -223,7 +224,7 @@ export function decodeMiniature(dataUri) {
 function sampleWorks(works, target) {
   const random = mulberry32(SEED);
   const shuffled = works
-    .filter((work) => work.grid?.length === CELLS * 6)
+    .filter((work) => work.grid?.length === CELLS * 6 && plausibleYear(work.year))
     .map((work) => ({ work, key: random() }))
     .sort((a, b) => a.key - b.key)
     .slice(0, target)
@@ -419,6 +420,10 @@ function mulberry32(seed) {
 function gaussian(random) {
   const u = Math.max(random(), 1e-9);
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
+}
+
+function plausibleYear(year) {
+  return Number.isFinite(year) && year >= YEAR_RANGE[0] && year <= YEAR_RANGE[1];
 }
 
 function clean(value) {
