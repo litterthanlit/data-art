@@ -31,7 +31,8 @@ const FIELDS = [
   "image_id",
 ];
 const PAGE_SIZE = 100;
-const SEARCH_WINDOW = 9900; // AIC search caps page * limit at 10,000
+const SEARCH_WINDOW = 1000; // AIC search refuses offset + limit beyond 1,000
+const MAX_ID = 1_000_000;
 const REQUEST_GAP_MS = 1100; // anonymous rate limit is 60 requests / minute
 const TARGET = Number(process.env.ARCHIVE_TARGET || 20000);
 const GRID = 4;
@@ -57,7 +58,7 @@ async function main() {
 
 async function fetchCollection() {
   await mkdir(RANGE_DIR, { recursive: true });
-  const ranges = await partitionYears(-8000, 2030);
+  const ranges = await partitionIds(0, MAX_ID);
   const records = [];
 
   for (const [lo, hi] of ranges) {
@@ -80,8 +81,8 @@ async function fetchCollection() {
   return works;
 }
 
-// Split the date axis until every slice fits inside the search window.
-async function partitionYears(lo, hi) {
+// Split the id axis until every slice fits inside the search window.
+async function partitionIds(lo, hi) {
   const total = await countRange(lo, hi);
   if (total === 0) return [];
   if (total <= SEARCH_WINDOW || hi - lo <= 1) {
@@ -91,7 +92,7 @@ async function partitionYears(lo, hi) {
     return [[lo, hi]];
   }
   const mid = Math.floor((lo + hi) / 2);
-  return [...(await partitionYears(lo, mid)), ...(await partitionYears(mid, hi))];
+  return [...(await partitionIds(lo, mid)), ...(await partitionIds(mid, hi))];
 }
 
 async function countRange(lo, hi) {
@@ -101,7 +102,7 @@ async function countRange(lo, hi) {
 
 async function fetchRange(lo, hi) {
   const rows = [];
-  for (let page = 1; page * PAGE_SIZE <= SEARCH_WINDOW + PAGE_SIZE; page += 1) {
+  for (let page = 1; page * PAGE_SIZE <= SEARCH_WINDOW; page += 1) {
     const body = await search({
       query: rangeQuery(lo, hi),
       fields: FIELDS,
@@ -124,7 +125,8 @@ function rangeQuery(lo, hi) {
       filter: [
         { term: { is_public_domain: true } },
         { exists: { field: "image_id" } },
-        { range: { date_start: { gte: lo, lt: hi } } },
+        { exists: { field: "date_start" } },
+        { range: { id: { gte: lo, lt: hi } } },
       ],
     },
   };
