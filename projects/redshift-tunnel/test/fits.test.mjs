@@ -20,7 +20,7 @@ function headerBlocks(cards) {
 }
 
 // Columns: TARGETID K, PHOTSYS 1A, RA D, DEC D, Z D  => NAXIS1 = 8+1+8+8+8 = 33
-function makeFits(rows, { extraCards = 40 } = {}) {
+function makeFits(rows, { extraCards = 40, photsysForm = '1A', naxis1Header = 33 } = {}) {
   const primary = headerBlocks([
     card(`SIMPLE  = ${'T'.padStart(20)}`),
     kv('BITPIX', 8),
@@ -33,7 +33,7 @@ function makeFits(rows, { extraCards = 40 } = {}) {
     kv('XTENSION', 'BINTABLE'),
     kv('BITPIX', 8),
     kv('NAXIS', 2),
-    kv('NAXIS1', naxis1),
+    kv('NAXIS1', naxis1Header),
     kv('NAXIS2', rows.length),
     kv('PCOUNT', 0),
     kv('GCOUNT', 1),
@@ -41,7 +41,7 @@ function makeFits(rows, { extraCards = 40 } = {}) {
     kv('TTYPE1', 'TARGETID'),
     kv('TFORM1', 'K'),
     kv('TTYPE2', 'PHOTSYS'),
-    kv('TFORM2', '1A'),
+    kv('TFORM2', photsysForm),
     kv('TTYPE3', 'RA'),
     kv('TFORM3', 'D'),
     kv('TTYPE4', 'DEC'),
@@ -96,4 +96,13 @@ test('throws a descriptive error for a missing column', () => {
 
 test('throws for an unsupported TFORM in a requested column', () => {
   assert.throws(() => readFitsColumns(makeFits(ROWS), ['PHOTSYS']), /PHOTSYS/);
+});
+
+test('steps past bit-flag columns it does not decode', () => {
+  const { columns } = readFitsColumns(makeFits(ROWS, { photsysForm: '8X' }), ['Z']);
+  assert.deepEqual(Array.from(columns.Z), ROWS.map((r) => r.z));
+});
+
+test('throws when the column widths disagree with NAXIS1', () => {
+  assert.throws(() => readFitsColumns(makeFits(ROWS, { naxis1Header: 41 }), ['Z']), /NAXIS1/);
 });

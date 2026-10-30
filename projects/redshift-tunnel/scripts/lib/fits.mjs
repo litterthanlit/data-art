@@ -2,7 +2,7 @@
 const BLOCK = 2880;
 const CARD = 80;
 
-const WIDTHS = { K: 8, D: 8, E: 4, J: 4, I: 2, B: 1, L: 1 };
+const WIDTHS = { K: 8, D: 8, E: 4, J: 4, I: 2, B: 1, L: 1, C: 8, M: 16, P: 8, Q: 16 };
 
 function parseCardValue(raw) {
   const v = raw.trim();
@@ -49,6 +49,7 @@ function parseTform(tform) {
   const repeat = m[1] === '' ? 1 : Number(m[1]);
   const code = m[2];
   if (code === 'A') return { code, repeat, width: repeat };
+  if (code === 'X') return { code, repeat, width: Math.ceil(repeat / 8) };
   if (WIDTHS[code]) return { code, repeat, width: WIDTHS[code] * repeat };
   throw new Error(`Unsupported TFORM '${tform}'`);
 }
@@ -78,6 +79,10 @@ export function readBinTableHeader(buf) {
         }
         fields.push({ name, tform, ...parsed, offset });
         offset += parsed.width;
+      }
+      // An unknown column width would silently shift every column after it.
+      if (offset !== rowBytes) {
+        throw new Error(`FITS column widths sum to ${offset} bytes but NAXIS1 is ${rowBytes}`);
       }
       return { rows, rowBytes, dataOffset: end, fields };
     }
