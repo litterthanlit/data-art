@@ -47,8 +47,8 @@ body {
 /* Title */
 .title {
   position: absolute;
-  top: clamp(20px, 4vh, 40px);
-  left: clamp(16px, 4vw, 48px);
+  top: calc(clamp(20px, 4vh, 40px) + env(safe-area-inset-top, 0px));
+  left: calc(clamp(16px, 4vw, 48px) + env(safe-area-inset-left, 0px));
   max-width: min(360px, calc(100vw - 32px));
   pointer-events: none;
 }
@@ -80,8 +80,8 @@ body {
 /* Legend: the colour ramp, youngest light to oldest */
 .legend {
   position: absolute;
-  left: clamp(16px, 4vw, 48px);
-  bottom: clamp(20px, 4vh, 40px);
+  left: calc(clamp(16px, 4vw, 48px) + env(safe-area-inset-left, 0px));
+  bottom: calc(clamp(20px, 4vh, 40px) + env(safe-area-inset-bottom, 0px));
   width: min(220px, 40vw);
   margin: 0;
 }
@@ -138,8 +138,8 @@ body {
 /* Dock */
 .dock {
   position: absolute;
-  right: clamp(16px, 4vw, 48px);
-  bottom: clamp(20px, 4vh, 40px);
+  right: calc(clamp(16px, 4vw, 48px) + env(safe-area-inset-right, 0px));
+  bottom: calc(clamp(20px, 4vh, 40px) + env(safe-area-inset-bottom, 0px));
   display: flex;
   align-items: center;
   gap: 4px;
@@ -260,7 +260,7 @@ kbd {
 
 @media (max-width: 600px) {
   .summary { display: none; }
-  .legend { bottom: 86px; width: calc(100vw - 32px); }
+  .legend { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); width: calc(100vw - 32px); }
   .dock { left: 50%; right: auto; transform: translateX(-50%); }
   .about { padding: 24px; }
   .keys { display: none; }

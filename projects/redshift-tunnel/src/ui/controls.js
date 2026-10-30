@@ -12,14 +12,18 @@ export function createControls(scene) {
   }
 
   function toggleFullscreen() {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else document.documentElement.requestFullscreen?.();
+    // Browsers and embedding frames may refuse; the tunnel simply stays as it is.
+    const request = document.fullscreenElement
+      ? document.exitFullscreen()
+      : document.documentElement.requestFullscreen?.();
+    request?.catch(() => {});
   }
 
   function openAbout() {
     if (!about.open) about.showModal();
   }
 
+  fullscreen.hidden = !document.fullscreenEnabled;
   pause.addEventListener("click", () => setPaused(!scene.paused));
   fullscreen.addEventListener("click", toggleFullscreen);
   aboutButton.addEventListener("click", openAbout);
