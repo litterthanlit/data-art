@@ -79,3 +79,13 @@ Inspiration (from the user):
 - `npm run data` writes the binary and metadata and prints the object count, `z` range, and file size.
 - `npm run build` passes.
 - Headless Chromium screenshots on desktop and mobile show the tunnel rendering with a red edge and a bright core. There are no console errors, and a reduced-motion run is included.
+
+## Revision: Rivers (2026-10-30, after the first preview)
+
+The user found the first build too static and the bright core disturbing. They compared three sketches and chose **A · Rivers**. This revision replaces the "fixed objects, flowing light" and core-glow decisions above.
+
+- **Rivers of light stream from the edges into the center.** About 262k particles, each sampled from a real galaxy, follow a shared flow field. The field's angular currents gather light into a few braided streams that pour inward. A long-exposure trail buffer turns the moving points into continuous rivers.
+- **There is no orb.** Light dims and dissolves into a quiet dark center, which stands for now.
+- **Colour shows lookback time by distance from the center** (user's choice, made with the trade-off explained). It is no longer each galaxy's own redshift. Light at the rim is red (about 12 Gyr), and it melts through amber and white to blue-white as it nears the center. The About panel says this plainly.
+- **Data still drives the piece.** Each river particle enters at its galaxy's place in the sky (RA mapped through its CDF), quasars are brighter, and labels read the lookback time at the distance where they sit on a river.
+- Mouse parallax is removed, because the view is flat. Reduced motion runs at 0.25× speed. Pause stops all GPU work.

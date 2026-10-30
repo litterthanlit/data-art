@@ -2,12 +2,13 @@ import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import "./styles.css";
 import { loadTunnel } from "./data/loadTunnel.js";
-import { buildAnchors } from "./tunnel/mapping.js";
-import { TunnelScene } from "./scene/TunnelScene.js";
+import { buildSources } from "./tunnel/mapping.js";
+import { PARTICLE_COUNT } from "./tunnel/RiverField.js";
+import { RiverScene } from "./scene/RiverScene.js";
 import { createLabels } from "./ui/labels.js";
 import { createControls } from "./ui/controls.js";
 
-const REDUCED_MOTION_SCALE = 0.15;
+const REDUCED_MOTION_SCALE = 0.25;
 const TRACER_RANGES = { BGS: "z 0.0–0.5", LRG: "z 0.4–1.1", ELG: "z 0.8–1.6", QSO: "z 0.8–3.5" };
 
 const status = document.getElementById("status");
@@ -15,7 +16,6 @@ const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 function applyMotionPreference(scene) {
   scene.setMotionScale(reducedMotion.matches ? REDUCED_MOTION_SCALE : 1);
-  scene.setParallax(!reducedMotion.matches);
 }
 
 function describe(meta) {
@@ -30,15 +30,15 @@ function describe(meta) {
 }
 
 try {
-  const scene = new TunnelScene(document.getElementById("scene"));
+  const scene = new RiverScene(document.getElementById("scene"));
   createControls(scene);
   applyMotionPreference(scene);
   reducedMotion.addEventListener("change", () => applyMotionPreference(scene));
   const data = await loadTunnel(`${import.meta.env.BASE_URL}data/`);
-  const anchors = buildAnchors(data, data.meta);
-  scene.setData(anchors);
+  const sources = buildSources(data, PARTICLE_COUNT);
+  scene.setData(sources);
   describe(data.meta);
-  createLabels(document.getElementById("labels"), scene, data, anchors, { max: 8 });
+  createLabels(document.getElementById("labels"), scene, data.meta, sources);
   status.hidden = true;
   scene.start();
 } catch (error) {

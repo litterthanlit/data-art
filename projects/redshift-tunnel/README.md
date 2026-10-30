@@ -1,8 +1,6 @@
 # Redshift Tunnel
 
-A light tunnel made of 600,000 real galaxies and quasars. Light from distant objects is stretched toward red on its way to us. Here that stretch decides everything: each object sits at the depth of its own light-travel time and glows in its own colour. Deep red light from 12 billion years ago lines the rim. Younger light warms through amber to white and blue-white at the core, which stands for here and now.
-
-The objects stay where the data puts them. What flows is their light: faint streaks leave each object toward the core and fade before they arrive, while spiral bands of brightness travel down the tunnel.
+Rivers of light from real galaxies and quasars stream in from the edges and dissolve into a quiet dark centre. Distance from the centre works as a clock. Light at the red rim left about 12 billion years ago, and as it flows inward it melts through amber and white to the blue-white of light that left recently. The centre is now.
 
 Inspired by the stargate sequence in *2001: A Space Odyssey*, kishimisu's *Eclipse*, and Tiziana Alocci's particle sculptures.
 
@@ -33,15 +31,14 @@ Run the unit tests with `npm test`. With `npm run dev` running, `npm run test:br
 
 ## How the data becomes the picture
 
-- **Depth** is lookback time, eased so the crowd of nearby galaxies doesn't pile up at the far end. Oldest light is nearest the camera and youngest light is deepest.
-- **Colour** follows lookback time through blue-white, white, amber, red-orange and deep red. It rises strictly with redshift.
-- **Angle** follows right ascension mapped through its own distribution. DESI sees two patches of sky, and this closes the tunnel wall while keeping neighbours together. **Radius** follows declination, which forms the sheets.
+- About 262,000 river particles are sampled from the 600,000 bundled galaxies. Each one enters at its galaxy's place in the sky. Right ascension is mapped through its own distribution, because DESI sees two patches of sky and this closes the circle while keeping neighbours together.
+- A shared flow field gathers the light into braided rivers that pour inward. A long-exposure trail buffer turns moving points into continuous streams.
+- **Colour** shows lookback time by distance from the centre, from deep red (oldest) through amber and white to blue-white (now). Floating labels read that time where they sit on a river.
 - Quasars are drawn a little brighter.
 
 ## Interaction
 
 - It plays on load. Space pauses, F goes fullscreen, A opens the About panel and Escape closes it.
-- Moving the pointer tilts the tunnel slightly.
-- With `prefers-reduced-motion`, the flow slows to 15% and the tilt is off.
+- With `prefers-reduced-motion`, the flow slows to a quarter speed. Pausing stops all GPU work.
 
-Built with Vite, Three.js and hand-written GLSL. All motion is analytic in the vertex shader, and the CPU only updates uniforms.
+Built with Vite, Three.js and hand-written GLSL. The river simulation runs on the GPU (`GPUComputationRenderer`), and the CPU only updates uniforms and a few label tracers.
