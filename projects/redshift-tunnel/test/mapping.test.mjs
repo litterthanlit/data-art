@@ -17,7 +17,7 @@ test("depth runs from the camera (oldest light) to the far end (youngest light)"
   }
 });
 
-test("colour ramp hits blue-white at zMin and deep red at zMax", () => {
+test("colour ramp hits blue-white at the youngest light and deep red at the oldest", () => {
   closeRgb(colorFor(0.1, 0.1, 2.1), hex("#d6e4ff"));
   closeRgb(colorFor(2.1, 0.1, 2.1), hex("#7a0d1c"));
 });
@@ -67,4 +67,37 @@ test("buildAnchors lays out positions, colours, seeds and sizes", () => {
   }
   assert.ok(Math.abs(a.positions[2 * 3 + 2]) < 1e-3, "oldest object sits nearest the camera");
   assert.ok(Math.abs(a.positions[0 * 3 + 2] + TUNNEL.length) < 1e-3, "youngest object sits at the far end");
+});
+
+test("angles fill the whole circle even when the survey covers a narrow band of sky", () => {
+  const count = 2000;
+  const data = {
+    count,
+    z: new Float32Array(count).fill(1),
+    lookback: new Float32Array(count).fill(5),
+    ra: Float32Array.from({ length: count }, (_, i) => 100 + (10 * i) / count),
+    dec: new Float32Array(count),
+    tracer: new Uint8Array(count),
+  };
+  const a = buildAnchors(data, { zMin: 0.5, zMax: 1.5, lookbackMin: 1, lookbackMax: 10 });
+  const bins = new Array(12).fill(0);
+  for (let i = 0; i < count; i++) {
+    const angle = Math.atan2(a.positions[i * 3 + 1], a.positions[i * 3]) + Math.PI;
+    bins[Math.min(11, Math.floor((angle / (2 * Math.PI)) * 12))]++;
+  }
+  for (const n of bins) assert.ok(n > count / 24, `angular gap: ${bins}`);
+});
+
+test("colour follows lookback time, so it stays monotonic in z", () => {
+  const data = {
+    count: 2,
+    z: new Float32Array([0.54, 0.56]),
+    lookback: new Float32Array([1, 10]),
+    ra: new Float32Array(2),
+    dec: new Float32Array(2),
+    tracer: new Uint8Array(2),
+  };
+  const a = buildAnchors(data, { zMin: 0.5, zMax: 0.6, lookbackMin: 1, lookbackMax: 10 });
+  closeRgb(Array.from(a.colors.subarray(0, 3)), hex("#d6e4ff"));
+  closeRgb(Array.from(a.colors.subarray(3, 6)), hex("#7a0d1c"));
 });

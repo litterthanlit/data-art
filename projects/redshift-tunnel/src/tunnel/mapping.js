@@ -21,8 +21,10 @@ export function depthFor(lookback, min, max) {
   return TUNNEL.length * (u ** DEPTH_EASE - 1);
 }
 
-export function colorFor(z, zMin, zMax) {
-  const t = clamp01((z - zMin) / (zMax - zMin));
+// Coloured by lookback time rather than raw z: it rises strictly with z, but
+// spreads the survey's crowd of nearby galaxies across the ramp.
+export function colorFor(lookback, min, max) {
+  const t = clamp01((lookback - min) / (max - min));
   let i = 1;
   while (i < RAMP.length - 1 && t > RAMP[i][0]) i++;
   const [t0, c0] = RAMP[i - 1];
@@ -38,8 +40,26 @@ function hash01(i) {
   return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
 }
 
+// DESI sees two patches of sky. Mapping RA through its own cumulative
+// distribution closes the tunnel wall while keeping neighbours together.
+function raToAngle(ra, count) {
+  const BINS = 720;
+  const cdf = new Float64Array(BINS + 1);
+  for (let i = 0; i < count; i++) cdf[1 + Math.min(BINS - 1, Math.floor((ra[i] / 360) * BINS))]++;
+  for (let b = 1; b <= BINS; b++) cdf[b] += cdf[b - 1];
+  const angles = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    const x = (ra[i] / 360) * BINS;
+    const b = Math.min(BINS - 1, Math.floor(x));
+    const f = cdf[b] + (cdf[b + 1] - cdf[b]) * (x - b);
+    angles[i] = (f / count) * Math.PI * 2;
+  }
+  return angles;
+}
+
 export function buildAnchors(data, meta) {
   const { count } = data;
+  const angles = raToAngle(data.ra, count);
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
   const seeds = new Float32Array(count);
@@ -47,13 +67,13 @@ export function buildAnchors(data, meta) {
   const DEG = Math.PI / 180;
   for (let i = 0; i < count; i++) {
     const seed = hash01(i);
-    const angle = data.ra[i] * DEG;
+    const angle = angles[i];
     const radius =
       TUNNEL.radius + TUNNEL.radiusJitter * Math.sin(data.dec[i] * DEG) + SEED_JITTER * (seed * 2 - 1);
     positions[i * 3] = Math.cos(angle) * radius;
     positions[i * 3 + 1] = Math.sin(angle) * radius;
     positions[i * 3 + 2] = depthFor(data.lookback[i], meta.lookbackMin, meta.lookbackMax);
-    colors.set(colorFor(data.z[i], meta.zMin, meta.zMax), i * 3);
+    colors.set(colorFor(data.lookback[i], meta.lookbackMin, meta.lookbackMax), i * 3);
     seeds[i] = seed;
     sizes[i] = data.tracer[i] === QSO ? 1.6 : 1.0;
   }
