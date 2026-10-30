@@ -38,16 +38,18 @@ Inspiration (from the user):
 
 - Full-screen Three.js scene on near-black.
 - One GPU point system of roughly 300k to 1M objects, sampled from the catalogue. The builder picks the count that holds 60 fps on an integrated laptop GPU.
-- Tunnel mapping: lookback time (derived from `z`) sets each object's depth or radius. High-`z` objects sit at the outer edge or far end, and low-`z` objects sit near the core. Particles flow inward continuously, and objects wrap back to the edge so the stream never runs out.
+- Tunnel mapping: lookback time (derived from `z`) sets each object's depth or radius. High-`z` objects sit at the outer edge or far end, and low-`z` objects sit near the core.
 - Colour: mapped from `z` along a red → amber → white → blue-white ramp. It is tuned for beauty, but it stays monotonic with `z`.
 - Additive glow and bloom. A soft bright core like *Eclipse*'s ring at the center.
+- Decided with the user: **fixed objects, flowing light.** Each object sits still at its own lookback radius in its own `z` colour, and together they form the red-to-blue tunnel. The inward motion is faint streaks of light emitted by each object. A streak carries that object's colour and fades out within a short distance, well before the core, so a red object's light never reaches the blue center. Labels show the lookback time of the specific object they sit beside.
+- Decided with the user: **keep the survey's real density.** Sample uniformly from the catalogue without reweighting by `z`. The survey's real bands (target classes, quasar tail) stay visible as its fingerprint. The radial mapping from lookback time may be eased so nothing clumps visually, but it must stay monotonic. The About panel names the bands honestly.
 - Particles drift slightly along a curl or flow field so the streams braid into rivers and sheets, not straight radial lines.
 - A handful of floating labels at any moment (fewer than about 10) give lookback time, for example `7.2 Gyr`, in a small monospace face. They fade in and out with the flow.
 - Quasars, which are the brightest and most distant objects, can be slightly brighter or larger than galaxies.
 
 ## Data
 
-- Primary source: DESI Data Release 1 (public; about 18.7M redshifts). Use only objects with confident redshifts, and keep galaxies and quasars. Stars have `z ≈ 0` and add nothing, so drop them.
+- Primary source: DESI Data Release 1 (public; about 18.7M redshifts), via the LSS clustering catalogues v1.5 (BGS, LRG, ELG, QSO; about 1.26 GB). The full redshift tables are 9–11 GB each, which is too large for a build script. Use only objects with confident redshifts, and keep galaxies and quasars. Stars have `z ≈ 0` and add nothing, so drop them.
 - Fallback: if DESI's files are impractical to fetch or parse in a Node build script, use SDSS (DR17 or later) spectroscopic objects through the SkyServer SQL API. The README must say which source the piece uses.
 - Per object, keep `z`, class (galaxy or quasar), and RA/Dec. Compute lookback time with a standard flat ΛCDM cosmology (H0 ≈ 67.7, Ωm ≈ 0.31) at build time.
 - Follow the repo pattern. A `npm run data` script fetches and caches raw data under `scripts/cache/` (gitignored) and writes a compact binary plus JSON metadata to `public/data/`. The committed output must be small enough to keep in git (target under about 15 MB).
