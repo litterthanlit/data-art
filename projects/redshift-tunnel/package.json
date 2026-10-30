@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "data": "NODE_USE_ENV_PROXY=1 node scripts/build-tunnel-data.mjs",
-    "test": "node --test \"test/*.test.mjs\""
+    "test": "node --test \"test/*.test.mjs\"",
+    "test:browser": "node test/browser/ui.check.cjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

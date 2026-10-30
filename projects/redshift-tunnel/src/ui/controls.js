@@ -23,8 +23,13 @@ export function createControls(scene) {
   pause.addEventListener("click", () => setPaused(!scene.paused));
   fullscreen.addEventListener("click", toggleFullscreen);
   aboutButton.addEventListener("click", openAbout);
+  // The dialog element itself receives clicks on its padding too, so only a
+  // click outside its box counts as a click on the backdrop.
   about.addEventListener("click", (event) => {
-    if (event.target === about) about.close();
+    const box = about.getBoundingClientRect();
+    const inside =
+      event.clientX >= box.left && event.clientX <= box.right && event.clientY >= box.top && event.clientY <= box.bottom;
+    if (!inside) about.close();
   });
   document.addEventListener("fullscreenchange", () => {
     fullscreen.setAttribute("aria-pressed", String(Boolean(document.fullscreenElement)));

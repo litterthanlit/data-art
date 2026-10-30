@@ -20,7 +20,7 @@ Then visit:
 http://127.0.0.1:5173/
 ```
 
-Run the tests with `npm test`.
+Run the unit tests with `npm test`. With `npm run dev` running, `npm run test:browser -- http://127.0.0.1:5173/` checks the no-WebGL message and the About panel in headless Chromium.
 
 ## Data
 
