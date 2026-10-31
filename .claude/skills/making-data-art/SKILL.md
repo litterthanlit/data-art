@@ -18,7 +18,7 @@ A piece works when the data already holds a motion or colour, and the person who
    - **Name its contrast:** what changes or differs that a viewer will feel.
 
    Bring back three, each with one plain sentence on what it would look like. Recommend one and say why.
-3. **Settle the two honesty forks** before building (see the Quick Reference). Explain the trade-off plainly and let them choose.
+3. **Once they've picked a subject, settle the two honesty forks** (see the Quick Reference). Phrase each one in that subject's own terms, explain the trade-off plainly, and let them choose.
 4. **Sketch before building.** Make one throwaway preview page with 2–3 versions that look genuinely different, switchable, and using a small sample of the real data. They pick. "Too static" or "not flowing" means move the sketches toward motion trails, not tune the colours.
 5. **Build to the repo pattern** (`build-notes.md`). Data is fetched once and bundled, the build runs offline, and pure mapping code is tested.
 6. **Add what you learned to `subject-bank.md`:** new sources, their status, and any gotchas.

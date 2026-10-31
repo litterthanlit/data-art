@@ -19,11 +19,14 @@ Sources checked from this repo's cloud sessions. **Status** tells you how much t
 | LIGO/Virgo/KAGRA GWTC-4.0 via GWOSC (`gwosc.org/eventapi/json/allevents/`) | Inspiral chirp (rising pitch); 218 mergers | Public JSON plus strain audio | Unverified: TLS failed through the session proxy (2026-10) |
 | SDSS SkyServer SQL (`skyserver.sdss.org`) | Redshift | Public SQL API | Unverified: TLS failed through the proxy (2026-10) |
 | NOIRLab Astro Data Lab DESI queries (`datalab.noirlab.edu`) | Redshift | Needs a token (returned 401 without one) | Blocked without login |
+| NOAA CO-OPS tides (`api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&station=9414290`) | Rhythm: tide as breathing; spring/neap swell | No key, JSON, 6-min readings (~36 KB/day) | Verified 2026-10 |
+| NOAA OISST v2.1 daily SST (`ncei.noaa.gov/data/sea-surface-temperature-optimum-interpolation/v2.1/access/avhrr/`) | Temperature is colour; El Niño tongues | NetCDF, ~1.5 MB/day, Range supported (needs a NetCDF parser) | Verified 2026-10 |
+| NDBC buoy realtime (`ndbc.noaa.gov/data/realtime2/46026.txt`) | Wave height and period | Plain text, ~600 KB | Verified 2026-10 |
+| Open-Meteo Marine (`marine-api.open-meteo.com/v1/marine`) | Waves and swell | No key, JSON (shared daily limit) | Verified 2026-10 |
+| OSCAR surface currents on ERDDAP (`coastwatch.pfeg.noaa.gov/erddap/griddap/jplOscar`) | u/v current vectors: flow itself | ERDDAP CSV or JSON. Check the time axis first, because 2020 and 2023 queries returned 404 (past the end). | Partly verified 2026-10 |
 | Warming-stripes temperatures (global or regional anomaly series) | Temperature is colour; years are a clock | See the Warming Rivers spec once it's scouted | In progress |
 
 ## Ideas without a source yet
 
-- Ocean surface currents (flow field) and sea-surface temperature.
-- Tides at one harbour (breathing rhythm).
 - Bird migration tracks.
 - Earth's daily colour (DSCOVR EPIC).
