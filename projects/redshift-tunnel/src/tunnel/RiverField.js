@@ -3,17 +3,22 @@ import { GPUComputationRenderer } from "three/examples/jsm/misc/GPUComputationRe
 import { RIVERS } from "./mapping.js";
 import { simulationFragment, riverVertex, riverFragment } from "./riverShaders.js";
 
-export const PARTICLES_SIDE = 512;
-export const PARTICLE_COUNT = PARTICLES_SIDE * PARTICLES_SIDE;
+// About a million particles on large screens with a fine pointer; 262k elsewhere.
+export function particleSide() {
+  const large = Math.min(window.innerWidth, window.innerHeight) >= 700;
+  const finePointer = window.matchMedia("(pointer: fine)").matches;
+  return large && finePointer ? 1024 : 512;
+}
 
 // Brightness per particle, scaled so the rivers carry the same light whatever the count.
-const ALPHA = (0.14 * 60000) / PARTICLE_COUNT;
+const alphaFor = (count) => (0.14 * 60000) / count;
 
 // Every particle is light from one sampled galaxy. Its radius and angle live in a
 // float texture that a fragment shader advances each frame.
 export class RiverField {
   constructor(renderer, sources) {
-    const side = PARTICLES_SIDE;
+    const side = Math.round(Math.sqrt(sources.home.length));
+    const PARTICLE_COUNT = side * side;
     this.gpu = new GPUComputationRenderer(side, side, renderer);
 
     const initial = this.gpu.createTexture();
@@ -59,7 +64,7 @@ export class RiverField {
       uFit: { value: new THREE.Vector2(1, 1) },
       uReach: { value: 1 },
       uPointSize: { value: 1.6 },
-      uAlpha: { value: ALPHA },
+      uAlpha: { value: alphaFor(PARTICLE_COUNT) },
       uColourScale: { value: RIVERS.colourScale },
     };
     this.points = new THREE.Points(

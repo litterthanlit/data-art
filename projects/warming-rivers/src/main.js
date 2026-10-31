@@ -3,7 +3,7 @@ import "@fontsource-variable/geist-mono";
 import "./styles.css";
 import { loadWarming } from "./data/loadWarming.js";
 import { buildSources } from "./rivers/mapping.js";
-import { PARTICLE_COUNT } from "./rivers/RiverField.js";
+import { particleSide } from "./rivers/RiverField.js";
 import { RiverScene } from "./scene/RiverScene.js";
 import { createStreams } from "./ui/streams.js";
 import { createControls } from "./ui/controls.js";
@@ -50,7 +50,7 @@ try {
   reducedMotion.addEventListener("change", applyMotion);
 
   const data = await loadWarming(`${import.meta.env.BASE_URL}data/`);
-  scene.setData(buildSources(data.regions.length, PARTICLE_COUNT), data.regions);
+  scene.setData(buildSources(data.regions.length, particleSide() ** 2), data.regions);
   createScaleSwitch(scene);
   describe(data);
   createStreams({ names: document.getElementById("names"), labels: document.getElementById("labels") }, scene, data);

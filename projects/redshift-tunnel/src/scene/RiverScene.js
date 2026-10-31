@@ -13,7 +13,7 @@ export class RiverScene {
   constructor(canvas) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
     this.renderer.autoClear = false;
-    this.pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+    this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     this.renderer.setPixelRatio(this.pixelRatio);
 
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);

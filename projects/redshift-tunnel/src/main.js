@@ -3,7 +3,7 @@ import "@fontsource-variable/geist-mono";
 import "./styles.css";
 import { loadTunnel } from "./data/loadTunnel.js";
 import { buildSources } from "./tunnel/mapping.js";
-import { PARTICLE_COUNT } from "./tunnel/RiverField.js";
+import { particleSide } from "./tunnel/RiverField.js";
 import { RiverScene } from "./scene/RiverScene.js";
 import { createLabels } from "./ui/labels.js";
 import { createControls } from "./ui/controls.js";
@@ -35,7 +35,7 @@ try {
   applyMotionPreference(scene);
   reducedMotion.addEventListener("change", () => applyMotionPreference(scene));
   const data = await loadTunnel(`${import.meta.env.BASE_URL}data/`);
-  const sources = buildSources(data, PARTICLE_COUNT);
+  const sources = buildSources(data, particleSide() ** 2);
   scene.setData(sources);
   describe(data.meta);
   createLabels(document.getElementById("labels"), scene, data.meta, sources);
