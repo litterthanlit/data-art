@@ -35,6 +35,8 @@ A piece works when the data already holds a motion or colour, and the person who
 | "Feels static", "more flowing", "fluent" | Particles need visible travel plus a fading trail buffer |
 | Bright centre or orb "disturbing" | Let light dissolve into darkness; don't add a glow |
 | Most points are the same colour | Normalise colour by a better-spread variable (rank, lookback time), keeping it monotonic |
+| "The other piece is so much sicker" | Sketch the new subject on the engine they love; change what the light means, not how it moves |
+| A print palette looks grey or dim as light | Dark ends vanish on black. Use a luminous ramp (heat: violet → red → amber → white) that brightens toward the extreme |
 
 ## Common Mistakes
 
