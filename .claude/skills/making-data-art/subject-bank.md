@@ -10,6 +10,7 @@ Sources checked from this repo's cloud sessions. **Status** tells you how much t
 | Art Institute of Chicago API (`api.artic.edu`) | Artwork colour (`thumbnail.lqip`) | No key, 60 req/min, 10k search window. IIIF images blocked cross-site by Cloudflare. | Verified 2026-09 (Latent Archive) |
 | NASA DONKI CME / GST (`kauai.ccmc.gsfc.nasa.gov/DONKI/`) | Eruption speed and timing, storm windows | No key | Verified 2026-08 (Solar Wind Breath) |
 | Open-Meteo Historical (`archive-api.open-meteo.com`) | Hourly weather | No key. A daily limit is shared across the proxy and can return "limit exceeded". | Verified 2026-10, rate-limited |
+| NOAA Climate at a Glance, global time series (`ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series/{region}/{land_ocean\|land\|ocean}/12/12/1850-2025/data.json`) | Annual temperature departure (°C vs 1901–2000) is colour; years are a clock | No key, JSON, ~5 KB per series, 1850–2025. Regions: `globe`, `nhem`, `shem`, `arctic`, `antarctic`, `africa`, `asia`, `europe`, `northAmerica`, `southAmerica`, `oceania`. The continents ignore the surface parameter; only `globe`/`nhem`/`shem` split into land and ocean. 2025: Arctic +2.71, Antarctic +0.48. | Verified 2026-10 (Warming Rivers) |
 | World Bank / UN Comtrade | Trade flows | Illustrative only in Trade Organism | Partially used |
 
 ## Scouted, not yet used
@@ -24,7 +25,6 @@ Sources checked from this repo's cloud sessions. **Status** tells you how much t
 | NDBC buoy realtime (`ndbc.noaa.gov/data/realtime2/46026.txt`) | Wave height and period | Plain text, ~600 KB | Verified 2026-10 |
 | Open-Meteo Marine (`marine-api.open-meteo.com/v1/marine`) | Waves and swell | No key, JSON (shared daily limit) | Verified 2026-10 |
 | OSCAR surface currents on ERDDAP (`coastwatch.pfeg.noaa.gov/erddap/griddap/jplOscar`) | u/v current vectors: flow itself | ERDDAP CSV or JSON. Check the time axis first, because 2020 and 2023 queries returned 404 (past the end). | Partly verified 2026-10 |
-| NOAA Climate at a Glance, global time series (`ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series/{region}/{land_ocean\|land\|ocean}/12/12/1850-2025/data.json`) | Annual temperature departure (°C vs 1901–2000) is colour; years are a clock | No key, JSON, ~5 KB per series, 1850–2025. Regions: `globe`, `nhem`, `shem`, `arctic`, `antarctic`, `africa`, `asia`, `europe`, `northAmerica`, `southAmerica`, `oceania`. The continents ignore the surface parameter; only `globe`/`nhem`/`shem` split into land and ocean. 2025: Arctic +2.71, Antarctic +0.48. | Verified 2026-10 (Warming Rivers) |
 
 ## Ideas without a source yet
 
