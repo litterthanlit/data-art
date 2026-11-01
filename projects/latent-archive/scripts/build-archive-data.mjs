@@ -2,43 +2,41 @@ import { mkdir, readFile, writeFile, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { GifReader } from "omggif";
+import jpeg from "jpeg-js";
 import { UMAP } from "umap-js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CACHE_DIR = join(ROOT, "scripts", "cache");
-const RANGE_DIR = join(CACHE_DIR, ".ranges");
 const CACHE_FILE = process.env.ARCHIVE_CACHE
   ? resolve(process.env.ARCHIVE_CACHE)
-  : join(CACHE_DIR, "aic-artworks.json");
+  : join(CACHE_DIR, "cma-artworks.json");
+const GRID_CACHE = join(CACHE_DIR, "cma-grids.json");
 const OUT_DIR = join(ROOT, "public", "data");
 const OUT_BIN = join(OUT_DIR, "latent-archive.bin");
 const OUT_META = join(OUT_DIR, "latent-archive.json");
 
-const API = "https://api.artic.edu/api/v1/artworks/search";
+const API = "https://openaccess-api.clevelandart.org/api/artworks/";
+const IMAGE_HOST = "https://openaccess-cdn.clevelandart.org/";
 const USER_AGENT = "data-art/latent-archive (https://github.com/litterthanlit/data-art)";
 const FIELDS = [
   "id",
+  "accession_number",
   "title",
-  "artist_title",
-  "date_start",
-  "date_display",
-  "place_of_origin",
-  "classification_title",
-  "department_title",
-  "color",
-  "thumbnail",
-  "image_id",
+  "creators",
+  "creation_date",
+  "creation_date_earliest",
+  "culture",
+  "type",
+  "department",
+  "images",
 ];
-const PAGE_SIZE = 100;
-const SEARCH_WINDOW = 1000; // AIC search refuses offset + limit beyond 1,000
-const MAX_ID = 1_000_000;
-const REQUEST_GAP_MS = 1100; // anonymous rate limit is 60 requests / minute
+const PAGE_SIZE = 1000;
+const DOWNLOADS_IN_FLIGHT = 8;
 const TARGET = Number(process.env.ARCHIVE_TARGET || 20000);
 const GRID = 4;
 const CELLS = GRID * GRID;
 const SEED = 1917;
-const YEAR_RANGE = [-8000, 2030]; // AIC has a few corrupt date_start values (e.g. 1486490)
+const YEAR_RANGE = [-8000, 2030];
 
 async function main() {
   const refresh = process.argv.includes("--refresh");
@@ -46,8 +44,8 @@ async function main() {
     ? JSON.parse(await readFile(CACHE_FILE, "utf8"))
     : await fetchCollection();
 
-  console.log(`cache: ${works.length.toLocaleString()} artworks with miniatures`);
-  const sample = sampleWorks(works, TARGET);
+  console.log(`cache: ${works.length.toLocaleString()} CC0 artworks with images`);
+  const sample = await sampleWorks(works, TARGET);
   console.log(`sample: ${sample.length.toLocaleString()} artworks → ${(sample.length * CELLS).toLocaleString()} pigment particles`);
 
   const latent = await embed(sample);
@@ -59,178 +57,165 @@ async function main() {
 /* ------------------------------------------------------------------ fetch */
 
 async function fetchCollection() {
-  await mkdir(RANGE_DIR, { recursive: true });
-  const ranges = await partitionIds(0, MAX_ID);
-  const records = [];
-
-  for (const [lo, hi] of ranges) {
-    const file = join(RANGE_DIR, `${lo}_${hi}.json`);
-    let rows;
-    if (existsSync(file)) {
-      rows = JSON.parse(await readFile(file, "utf8"));
-    } else {
-      rows = await fetchRange(lo, hi);
-      await writeFile(file, JSON.stringify(rows));
+  const works = [];
+  for (let skip = 0; ; skip += PAGE_SIZE) {
+    const body = await getJson(
+      `${API}?cc0=1&has_image=1&limit=${PAGE_SIZE}&skip=${skip}&fields=${FIELDS.join(",")}`,
+    );
+    for (const item of body.data ?? []) {
+      const work = compactWork(item);
+      if (work) works.push(work);
     }
-    records.push(...rows);
-    console.log(`  ${lo}…${hi}: ${rows.length} usable (total ${records.length})`);
+    console.log(`  ${skip + (body.data?.length ?? 0)} / ${body.info?.total ?? "?"} records, ${works.length} usable`);
+    if (!body.data?.length || skip + PAGE_SIZE >= (body.info?.total ?? 0)) break;
   }
-
-  const seen = new Set();
-  const works = records.filter((work) => !seen.has(work.id) && seen.add(work.id));
   await mkdir(dirname(CACHE_FILE), { recursive: true });
   await writeFile(CACHE_FILE, JSON.stringify(works));
   return works;
 }
 
-// Split the id axis until every slice fits inside the search window.
-async function partitionIds(lo, hi) {
-  const total = await countRange(lo, hi);
-  if (total === 0) return [];
-  if (total <= SEARCH_WINDOW || hi - lo <= 1) {
-    if (total > SEARCH_WINDOW) {
-      console.warn(`  ${lo}…${hi} holds ${total} works; keeping the first ${SEARCH_WINDOW}`);
-    }
-    return [[lo, hi]];
-  }
-  const mid = Math.floor((lo + hi) / 2);
-  return [...(await partitionIds(lo, mid)), ...(await partitionIds(mid, hi))];
-}
-
-async function countRange(lo, hi) {
-  const body = await search({ query: rangeQuery(lo, hi), limit: 0, fields: ["id"] });
-  return body.pagination?.total ?? 0;
-}
-
-async function fetchRange(lo, hi) {
-  const rows = [];
-  for (let page = 1; page * PAGE_SIZE <= SEARCH_WINDOW; page += 1) {
-    const body = await search({
-      query: rangeQuery(lo, hi),
-      fields: FIELDS,
-      limit: PAGE_SIZE,
-      page,
-      sort: [{ id: "asc" }],
-    });
-    for (const item of body.data ?? []) {
-      const work = compactWork(item);
-      if (work) rows.push(work);
-    }
-    if (page >= (body.pagination?.total_pages ?? 0)) break;
-  }
-  return rows;
-}
-
-function rangeQuery(lo, hi) {
-  return {
-    bool: {
-      filter: [
-        { term: { is_public_domain: true } },
-        { exists: { field: "image_id" } },
-        { exists: { field: "date_start" } },
-        { range: { id: { gte: lo, lt: hi } } },
-      ],
-    },
-  };
-}
-
-let lastRequest = 0;
-async function search(payload, attempt = 0) {
-  const wait = lastRequest + REQUEST_GAP_MS - Date.now();
-  if (wait > 0) await sleep(wait);
-  lastRequest = Date.now();
-
-  const response = await fetch(API, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "AIC-User-Agent": USER_AGENT,
-    },
-    body: JSON.stringify(payload),
-  });
-
+async function getJson(url, attempt = 0) {
+  const response = await fetch(url, { headers: { "user-agent": USER_AGENT } });
   if (response.status === 429 || response.status >= 500) {
-    if (attempt >= 5) throw new Error(`AIC API ${response.status} after retries`);
+    if (attempt >= 5) throw new Error(`CMA API ${response.status} after retries`);
     await sleep(2000 * 2 ** attempt);
-    return search(payload, attempt + 1);
+    return getJson(url, attempt + 1);
   }
-  if (!response.ok) throw new Error(`AIC API ${response.status}: ${await response.text()}`);
+  if (!response.ok) throw new Error(`CMA API ${response.status}: ${await response.text()}`);
   return response.json();
 }
 
 function compactWork(item) {
-  const lqip = item.thumbnail?.lqip;
-  if (!lqip || !item.image_id || !plausibleYear(item.date_start)) return null;
-
-  const grid = decodeMiniature(lqip);
-  if (!grid) return null;
+  const image = item.images?.web?.url;
+  const year = item.creation_date_earliest;
+  if (!image?.startsWith(IMAGE_HOST) || !item.accession_number || !plausibleYear(year)) return null;
 
   return {
     id: item.id,
+    accession: item.accession_number,
     title: clean(item.title) || "Untitled",
-    artist: clean(item.artist_title) || "Unknown maker",
-    year: item.date_start,
-    date: clean(item.date_display) || String(item.date_start),
-    place: clean(item.place_of_origin),
-    department: clean(item.department_title) || "Collection",
-    classification: clean(item.classification_title),
-    color: item.color ? [item.color.h, item.color.s, item.color.l] : null,
-    image: item.image_id,
-    grid,
+    artist: makerName(item.creators) || clean(item.culture?.[0]) || "Unknown maker",
+    year,
+    date: clean(item.creation_date) || String(year),
+    place: clean(item.culture?.[0]?.split(",")[0]),
+    department: clean(item.department) || "Collection",
+    classification: clean(item.type),
+    image: image.slice(IMAGE_HOST.length),
   };
 }
 
-// LQIP is a tiny base64 GIF of the artwork. Area-average it into a 4×4 RGB grid.
-export function decodeMiniature(dataUri) {
-  try {
-    const base64 = dataUri.slice(dataUri.indexOf(",") + 1);
-    const reader = new GifReader(new Uint8Array(Buffer.from(base64, "base64")));
-    const { width, height } = reader;
-    const rgba = new Uint8Array(width * height * 4);
-    reader.decodeAndBlitFrameRGBA(0, rgba);
+// "John Singleton Copley (American, 1738–1815)" → "John Singleton Copley"
+function makerName(creators) {
+  return clean(creators?.[0]?.description).replace(/\s*\(.*$/, "");
+}
 
-    let hex = "";
-    for (let gy = 0; gy < GRID; gy += 1) {
-      for (let gx = 0; gx < GRID; gx += 1) {
-        const x0 = (gx / GRID) * width;
-        const x1 = ((gx + 1) / GRID) * width;
-        const y0 = (gy / GRID) * height;
-        const y1 = ((gy + 1) / GRID) * height;
-        const sum = [0, 0, 0];
-        let weight = 0;
-        for (let y = Math.floor(y0); y < Math.ceil(y1); y += 1) {
-          const wy = Math.min(y + 1, y1) - Math.max(y, y0);
-          for (let x = Math.floor(x0); x < Math.ceil(x1); x += 1) {
-            const w = wy * (Math.min(x + 1, x1) - Math.max(x, x0));
-            const i = (y * width + x) * 4;
-            sum[0] += rgba[i] * w;
-            sum[1] += rgba[i + 1] * w;
-            sum[2] += rgba[i + 2] * w;
-            weight += w;
-          }
-        }
-        for (const channel of sum) {
-          hex += Math.round(channel / weight).toString(16).padStart(2, "0");
+/* ----------------------------------------------------------------- grids */
+
+// Each sampled work's web image is downloaded once and area-averaged into 16 cells.
+// Grids are cached by id, so an interrupted build resumes where it stopped. The kept
+// works are the first `target` candidates with a grid, in shuffle order, however the
+// downloads happened to interleave.
+async function attachGrids(candidates, target) {
+  const cache = existsSync(GRID_CACHE) ? JSON.parse(await readFile(GRID_CACHE, "utf8")) : {};
+  let next = 0;
+  let kept = 0;
+  let fetched = 0;
+  let lastSave = Date.now();
+
+  async function worker() {
+    while (kept < target && next < candidates.length) {
+      const work = candidates[next++];
+      if (!(work.id in cache)) {
+        cache[work.id] = await downloadGrid(work.image);
+        fetched += 1;
+        if (fetched % 250 === 0) console.log(`  images: ${fetched} fetched, ${kept} / ${target} kept`);
+        if (Date.now() - lastSave > 30_000) {
+          lastSave = Date.now();
+          await writeFile(GRID_CACHE, JSON.stringify(cache));
         }
       }
+      if (cache[work.id]) kept += 1;
     }
-    return hex;
-  } catch {
-    return null;
   }
+
+  await mkdir(CACHE_DIR, { recursive: true });
+  await Promise.all(Array.from({ length: DOWNLOADS_IN_FLIGHT }, worker));
+  await writeFile(GRID_CACHE, JSON.stringify(cache));
+  return candidates
+    .filter((work) => cache[work.id])
+    .slice(0, target)
+    .map((work) => ({ ...work, grid: cache[work.id] }));
+}
+
+async function downloadGrid(path, attempt = 0) {
+  try {
+    const response = await fetch(IMAGE_HOST + path, { headers: { "user-agent": USER_AGENT } });
+    if (response.status === 429 || response.status >= 500) throw new Error(String(response.status));
+    if (!response.ok) return null;
+    const { width, height, data } = jpeg.decode(Buffer.from(await response.arrayBuffer()), {
+      useTArray: true,
+      formatAsRGBA: true,
+      maxMemoryUsageInMB: 1024,
+    });
+    return averageGrid(data, width, height);
+  } catch (error) {
+    if (attempt >= 3) {
+      console.warn(`  skipped ${path}: ${error.message}`);
+      return null;
+    }
+    await sleep(1000 * 2 ** attempt);
+    return downloadGrid(path, attempt + 1);
+  }
+}
+
+// Area-average an RGBA bitmap into a 4×4 grid, as one hex string of 16 RGB cells.
+function averageGrid(rgba, width, height) {
+  let hex = "";
+  for (let gy = 0; gy < GRID; gy += 1) {
+    for (let gx = 0; gx < GRID; gx += 1) {
+      const x0 = (gx / GRID) * width;
+      const x1 = ((gx + 1) / GRID) * width;
+      const y0 = (gy / GRID) * height;
+      const y1 = ((gy + 1) / GRID) * height;
+      const sum = [0, 0, 0];
+      let weight = 0;
+      for (let y = Math.floor(y0); y < Math.ceil(y1); y += 1) {
+        const wy = Math.min(y + 1, y1) - Math.max(y, y0);
+        for (let x = Math.floor(x0); x < Math.ceil(x1); x += 1) {
+          const w = wy * (Math.min(x + 1, x1) - Math.max(x, x0));
+          const i = (y * width + x) * 4;
+          sum[0] += rgba[i] * w;
+          sum[1] += rgba[i + 1] * w;
+          sum[2] += rgba[i + 2] * w;
+          weight += w;
+        }
+      }
+      for (const channel of sum) {
+        hex += Math.round(channel / weight).toString(16).padStart(2, "0");
+      }
+    }
+  }
+  return hex;
 }
 
 /* ---------------------------------------------------------------- shaping */
 
-function sampleWorks(works, target) {
+async function sampleWorks(works, target) {
   const random = mulberry32(SEED);
   const shuffled = works
-    .filter((work) => work.grid?.length === CELLS * 6 && plausibleYear(work.year))
+    .filter((work) => plausibleYear(work.year))
     .map((work) => ({ work, key: random() }))
     .sort((a, b) => a.key - b.key)
-    .slice(0, target)
     .map(({ work }) => work);
-  return shuffled.sort((a, b) => a.year - b.year || a.id - b.id);
+  const sample = await attachGrids(shuffled, target);
+  return sample.sort((a, b) => a.year - b.year || a.id - b.id);
+}
+
+function meanLightness(work) {
+  const rgb = gridRgb(work);
+  let sum = 0;
+  for (let c = 0; c < CELLS; c += 1) sum += rgbToLab(rgb[c * 3], rgb[c * 3 + 1], rgb[c * 3 + 2])[0];
+  return sum / CELLS / 100;
 }
 
 function gridRgb(work) {
@@ -300,7 +285,7 @@ function timeHelix(sample) {
   return sample.map((work, index) => {
     const t = ranks[index];
     const dept = departments.indexOf(work.department) / Math.max(1, departments.length);
-    const lightness = work.color ? work.color[2] / 100 : 0.5;
+    const lightness = meanLightness(work);
     const angle = t * turns * Math.PI * 2 + dept * 0.9 + gaussian(random) * 0.08;
     const radius = 17 + (lightness - 0.5) * 12 + gaussian(random) * 2.2;
     const y = (t - 0.5) * 56 + gaussian(random) * 0.9;
@@ -528,9 +513,10 @@ async function writeOutputs(sample, latent, helix, islands) {
 
   const departments = [...new Set(sample.map((work) => work.department))].sort();
   const meta = {
-    version: 1,
-    source: "Art Institute of Chicago API — public-domain works, CC0 metadata",
-    sourceUrl: "https://api.artic.edu/docs/",
+    version: 2,
+    source: "Cleveland Museum of Art Open Access API — CC0 works and images",
+    sourceUrl: "https://openaccess-api.clevelandart.org/",
+    imageHost: IMAGE_HOST,
     generatedAt: new Date().toISOString(),
     count,
     grid: GRID,
@@ -538,7 +524,7 @@ async function writeOutputs(sample, latent, helix, islands) {
     departments,
     islands,
     works: {
-      id: sample.map((work) => work.id),
+      accession: sample.map((work) => work.accession),
       title: sample.map((work) => work.title),
       artist: sample.map((work) => work.artist),
       date: sample.map((work) => work.date),

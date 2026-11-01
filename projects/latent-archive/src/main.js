@@ -4,7 +4,7 @@ import "./styles.css";
 import { describeWork, loadArchive, MissingArchiveError } from "./archive/loadArchive.js";
 import { ArchiveScene } from "./scene/ArchiveScene.js";
 import { IslandLabels } from "./ui/IslandLabels.js";
-import { formatEra, formatYear, imageUrl, workUrl } from "./ui/readouts.js";
+import { formatEra, formatYear, workUrl } from "./ui/readouts.js";
 
 const ERA_SPAN = 0.04; // each era window shows ±4% of the collection, by rank
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -19,8 +19,6 @@ let bootRun = 0;
 let bootController = null;
 let imageTimer = null;
 let imageToken = 0;
-let imageFailures = 0;
-const IMAGE_GIVE_UP = 3; // stop asking the image host after repeated refusals
 
 async function boot() {
   const runId = ++bootRun;
@@ -231,31 +229,24 @@ function showWork(index) {
   paintMosaic(index);
 
   // The 16 pigments show instantly; the real image arrives only if the gaze lingers.
-  // AIC's image host sits behind a Cloudflare challenge that <img> cannot pass, so a
-  // failure is expected: the plate then shows the machine's 16-colour memory instead.
+  // If the image cannot load, the plate keeps the machine's 16-colour memory instead.
   const image = document.getElementById("plate-image");
   const token = ++imageToken;
   image.hidden = true;
   image.onload = null;
   image.onerror = null;
 
-  if (imageFailures >= IMAGE_GIVE_UP) {
-    setPlate("unavailable");
-    return;
-  }
-
   setPlate("loading");
   imageTimer = window.setTimeout(() => {
     const done = (ok) => {
       if (token !== imageToken) return; // a newer hover owns the plate
-      imageFailures = ok ? 0 : imageFailures + 1;
       image.hidden = !ok;
       setPlate(ok ? "loaded" : "unavailable");
     };
     image.onload = () => done(image.naturalWidth > 0);
     image.onerror = () => done(false);
     image.alt = `${work.title}, ${work.artist}`;
-    const src = imageUrl(work);
+    const src = work.image;
     if (image.src === src && image.complete) {
       done(image.naturalWidth > 0); // same image again: no new load event fires
     } else {

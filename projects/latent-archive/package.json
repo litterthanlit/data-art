@@ -15,7 +15,7 @@
     "three": "^0.164.1"
   },
   "devDependencies": {
-    "omggif": "^1.0.10",
+    "jpeg-js": "^0.4.4",
     "umap-js": "^1.4.0",
     "vite": "^8.0.10"
   }

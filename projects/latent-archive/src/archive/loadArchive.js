@@ -91,13 +91,13 @@ export function describeWork(archive, index) {
   const { works, departments } = archive.meta;
   return {
     index,
-    id: works.id[index],
+    accession: works.accession[index],
     title: works.title[index],
     artist: works.artist[index],
     date: works.date[index],
     place: works.place[index],
     department: departments[works.department[index]] ?? "",
-    image: works.image[index],
+    image: archive.meta.imageHost + works.image[index],
     year: archive.years[index],
   };
 }
