@@ -26,3 +26,10 @@
 - Raw `.bin` is refused, both as `application/octet-stream` and as text, because it contains escape bytes. Ship it as base64 in a `.json` file, and add an inline `fetch` shim to the preview page only that decodes it back to bytes. The repo keeps the real `.bin`.
 - Fullscreen may be refused inside the frame. Hide the button when `!document.fullscreenEnabled`, and catch the rejected promise.
 - For a sketch, make one self-contained HTML file with a small base64 sample of the real data inlined (about 60k points is plenty).
+
+## Live links (Vercel)
+
+- Each piece gets its own Vercel project in the team `nicks-projects-14b58bdc`. Create it with `framework: "vite"`, `rootDirectory: "projects/<name>"`, `gitRepository: litterthanlit/data-art`, `enableAffectedProjectsDeployments: true`, and `ssoProtection: null`. Without that last setting, the links ask visitors to log in to Vercel.
+- Deploy from Git with `create_deployment` using `gitSource {type: "github", org: "litterthanlit", repo: "data-art", ref, sha}` and `target: "production"`. Vercel builds from the repo, so the committed `public/data/` ships as-is, including binaries. Production lives at `https://<name>.vercel.app`.
+- Projects build one at a time, so a second deployment may sit in `QUEUED` for a while.
+- Verify from outside: `curl` the page, the data file and the JS bundle, and check the bundle contains the expected code.
