@@ -40,7 +40,7 @@ Outputs:
 
 ## Island labels
 
-The latent cloud is named at build time. A voxel flood fill finds the separated islands, and large islands are split further with seeded k-means (about one region per 1,800 works). Each region is titled by its most over-represented classification relative to the whole sample, with the dominant place and the p10–p90 year span as detail: for example *Woodblock prints, Japan · 1690 – 1890* or *Coins, Roman Empire · 330 BCE – 520*. The labels are stored in `latent-archive.json` under `islands`. On screen they appear only in the Latent state: the largest regions claim space first, overlapping labels are hidden, and the detail line shows when you zoom in or point near a region.
+The latent cloud is named at build time. A voxel flood fill finds the separated islands, and large islands are split further with seeded k-means (about one region per 1,800 works). Each region is titled by its most over-represented classification relative to the whole sample, with the dominant place and the p10–p90 year span as detail: for example *Prints, France · 1540 – 1900* or *Arms and armors, Japan · 1500 – 1800*. The labels are stored in `latent-archive.json` under `islands`. On screen they appear only in the Latent state: the largest regions claim space first, overlapping labels are hidden, and the detail line shows when you zoom in or point near a region.
 
 ## Visual mapping
 
