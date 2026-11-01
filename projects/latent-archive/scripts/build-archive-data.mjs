@@ -56,19 +56,21 @@ async function main() {
 
 /* ------------------------------------------------------------------ fetch */
 
+// The API pages without a stable order, so a record can appear on two pages.
 async function fetchCollection() {
-  const works = [];
+  const byId = new Map();
   for (let skip = 0; ; skip += PAGE_SIZE) {
     const body = await getJson(
       `${API}?cc0=1&has_image=1&limit=${PAGE_SIZE}&skip=${skip}&fields=${FIELDS.join(",")}`,
     );
     for (const item of body.data ?? []) {
       const work = compactWork(item);
-      if (work) works.push(work);
+      if (work) byId.set(work.id, work);
     }
-    console.log(`  ${skip + (body.data?.length ?? 0)} / ${body.info?.total ?? "?"} records, ${works.length} usable`);
+    console.log(`  ${skip + (body.data?.length ?? 0)} / ${body.info?.total ?? "?"} records, ${byId.size} usable`);
     if (!body.data?.length || skip + PAGE_SIZE >= (body.info?.total ?? 0)) break;
   }
+  const works = [...byId.values()].sort((a, b) => a.id - b.id);
   await mkdir(dirname(CACHE_FILE), { recursive: true });
   await writeFile(CACHE_FILE, JSON.stringify(works));
   return works;
