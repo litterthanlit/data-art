@@ -20,6 +20,8 @@ const AUTO_SEQUENCE = [
 ];
 
 const PICK_RADIUS_PX = 16;
+const HOME_Z = 92; // camera distance on a landscape screen
+const FIT_RADIUS = 34; // the latent cloud's 95th-percentile radius, set by the data build
 
 export class ArchiveScene {
   constructor({ stage, onHover = () => {}, onSelect = () => {}, onPhase = () => {}, onFrame = () => {} }) {
@@ -57,6 +59,7 @@ export class ArchiveScene {
     this.baseRotation = { x: 0.18, y: 0 };
     this.autoRotationY = 0;
     this.zoomLimits = { min: 18, max: 150 };
+    this.homeZ = HOME_Z;
     this.scratch = new THREE.Vector3();
     this.inverseQuat = new THREE.Quaternion();
 
@@ -65,7 +68,10 @@ export class ArchiveScene {
     this.organism.add(this.field.object);
     this.scene.add(this.organism);
 
-    this.renderer.setClearColor(0x020206, 1);
+    // A scene background is converted to the working colour space on every render. A raw clear
+    // colour is not, and came out as navy once the output pass encoded it.
+    this.scene.background = new THREE.Color(0x020206);
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.pixelRatio = Math.min(window.devicePixelRatio || 1, 1.75);
     this.renderer.setPixelRatio(this.pixelRatio);
     this.field.uniforms.uPixelRatio.value = this.pixelRatio;
@@ -82,7 +88,7 @@ export class ArchiveScene {
 
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.7, 0.42, 0.16);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.35, 0.42, 0.8);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
 
@@ -143,6 +149,7 @@ export class ArchiveScene {
     u.uTime.value = this.time;
     u.uMorph.value = this.morph;
     u.uDream.value = this.dream;
+    u.uCameraZ.value = this.camera.position.z;
 
     this.updateClipMatrix();
     if (this.pointerDirty) {
@@ -237,7 +244,7 @@ export class ArchiveScene {
     this.baseRotation.x = 0.18;
     this.baseRotation.y = 0;
     this.autoRotationY = 0;
-    this.camera.position.set(0, 0, 92);
+    this.camera.position.set(0, 0, this.homeZ);
     this.camera.lookAt(0, 0, 0);
     this.applyRotation();
   }
@@ -407,12 +414,23 @@ export class ArchiveScene {
     // Keep the whole sculpture in frame on portrait screens.
     this.camera.fov = width < height ? 62 : 46;
     this.camera.updateProjectionMatrix();
+    this.fitHome();
     this.renderer.setSize(width, height, false);
     this.viewport = { width, height };
     this.field.uniforms.uViewScale.value = height / 900;
     this.composer.setSize(width, height);
     this.bloom.setSize(Math.round(width / 2), Math.round(height / 2));
     this.pointerDirty = true;
+  }
+
+  // Pull the camera back on narrow screens until the whole cloud fits across the width.
+  fitHome() {
+    const atHome = Math.abs(this.camera.position.z - this.homeZ) < 0.01;
+    const halfFov = THREE.MathUtils.degToRad(this.camera.fov / 2);
+    const fitZ = FIT_RADIUS / (Math.tan(halfFov) * Math.min(1, this.camera.aspect));
+    this.homeZ = Math.max(HOME_Z, fitZ);
+    this.zoomLimits.max = Math.max(150, this.homeZ * 1.4);
+    if (atHome) this.camera.position.z = this.homeZ;
   }
 
   render() {
