@@ -39,6 +39,10 @@ const GRID = 4;
 const CELLS = GRID * GRID;
 const SEED = 1917;
 const YEAR_RANGE = [-8000, 2030]; // AIC has a few corrupt date_start values (e.g. 1486490)
+const SAMPLE_DEPT_POWER = 0.6; // a department's quota grows as size^0.6, so large ones shrink
+const SAMPLE_COLOUR_POWER = 2; // how strongly colourful works are preferred inside a department
+const SAMPLE_HUE_POWER = 0.5; // how strongly rare hues (blues, greens) are preferred
+const HUE_BINS = 12;
 
 async function main() {
   const refresh = process.argv.includes("--refresh");
@@ -49,6 +53,7 @@ async function main() {
   console.log(`cache: ${works.length.toLocaleString()} artworks with miniatures`);
   const sample = sampleWorks(works, TARGET);
   console.log(`sample: ${sample.length.toLocaleString()} artworks → ${(sample.length * CELLS).toLocaleString()} pigment particles`);
+  console.log(sampleSummary(sample));
 
   const latent = await embed(sample);
   const helix = timeHelix(sample);
@@ -222,15 +227,95 @@ export function decodeMiniature(dataUri) {
 
 /* ---------------------------------------------------------------- shaping */
 
-function sampleWorks(works, target) {
+// A department-balanced, colour-weighted draw. A uniform shuffle returns the collection's own
+// proportions, which are two-fifths prints and drawings and mostly the colour of paper. Here each
+// department gets a quota that grows slower than its size, and inside a department colourful
+// works are more likely to be drawn (weighted sampling without replacement, Efraimidis–Spirakis).
+export function sampleWorks(works, target) {
   const random = mulberry32(SEED);
-  const shuffled = works
+  const pool = works
     .filter((work) => work.grid?.length === CELLS * 6 && plausibleYear(work.year))
-    .map((work) => ({ work, key: random() }))
-    .sort((a, b) => a.key - b.key)
-    .slice(0, target)
-    .map(({ work }) => work);
-  return shuffled.sort((a, b) => a.year - b.year || a.id - b.id);
+    .sort((a, b) => a.id - b.id);
+  const labs = pool.map(cellLab);
+
+  // How much of the pool's chroma each hue holds. Hues that hold little count for more.
+  const hueMass = new Array(HUE_BINS).fill(0);
+  for (const cells of labs) {
+    for (const [, a, b] of cells) hueMass[hueBin(a, b)] += Math.hypot(a, b);
+  }
+  const mass = hueMass.reduce((sum, value) => sum + value, 0) || 1;
+  const rarity = hueMass.map((value) => (1 / Math.max(value / mass, 0.005)) ** SAMPLE_HUE_POWER);
+  const rarityMean = hueMass.reduce((sum, value, bin) => sum + (value / mass) * rarity[bin], 0) || 1;
+
+  const groups = new Map();
+  pool.forEach((work, index) => {
+    let colour = 0;
+    for (const [, a, b] of labs[index]) {
+      colour += (Math.hypot(a, b) * rarity[hueBin(a, b)]) / rarityMean / CELLS;
+    }
+    const weight = (1 + colour) ** SAMPLE_COLOUR_POWER;
+    const entry = { work, key: random() ** (1 / weight) }; // a larger key is drawn first
+    if (!groups.has(work.department)) groups.set(work.department, []);
+    groups.get(work.department).push(entry);
+  });
+
+  const departments = [...groups.keys()].sort();
+  for (const department of departments) {
+    groups.get(department).sort((a, b) => b.key - a.key || a.work.id - b.work.id);
+  }
+
+  // Deal the target out in rounds. A department that runs out of works drops out and its
+  // share is dealt again to the ones that still have room.
+  const quota = new Map(departments.map((department) => [department, 0]));
+  let remaining = Math.min(target, pool.length);
+  let open = departments;
+  while (remaining > 0 && open.length) {
+    const total = open.reduce((sum, department) => sum + groups.get(department).length ** SAMPLE_DEPT_POWER, 0);
+    let dealt = 0;
+    for (const department of open) {
+      const size = groups.get(department).length;
+      const share = Math.max(1, Math.floor((remaining * size ** SAMPLE_DEPT_POWER) / total));
+      const give = Math.min(size - quota.get(department), remaining - dealt, share);
+      quota.set(department, quota.get(department) + give);
+      dealt += give;
+    }
+    if (dealt === 0) break;
+    remaining -= dealt;
+    open = open.filter((department) => quota.get(department) < groups.get(department).length);
+  }
+
+  return departments
+    .flatMap((department) => groups.get(department).slice(0, quota.get(department)).map(({ work }) => work))
+    .sort((a, b) => a.year - b.year || a.id - b.id);
+}
+
+function cellLab(work) {
+  const rgb = gridRgb(work);
+  const cells = [];
+  for (let c = 0; c < CELLS; c += 1) {
+    cells.push(rgbToLab(rgb[c * 3], rgb[c * 3 + 1], rgb[c * 3 + 2]));
+  }
+  return cells;
+}
+
+function hueBin(a, b) {
+  const turn = (Math.atan2(b, a) / (Math.PI * 2) + 1) % 1;
+  return Math.floor(turn * HUE_BINS) % HUE_BINS;
+}
+
+// One line for the build log: mean CIELAB chroma and the three largest departments.
+export function sampleSummary(sample) {
+  let chroma = 0;
+  const counts = new Map();
+  for (const work of sample) {
+    for (const [, a, b] of cellLab(work)) chroma += Math.hypot(a, b) / CELLS;
+    counts.set(work.department, (counts.get(work.department) || 0) + 1);
+  }
+  const top = [...counts]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([department, count]) => `${department} ${Math.round((count / sample.length) * 100)}%`);
+  return `  mean chroma ${(chroma / Math.max(1, sample.length)).toFixed(1)} · ${top.join(", ")}`;
 }
 
 function gridRgb(work) {
