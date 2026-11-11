@@ -8,7 +8,7 @@ honor its STOP conditions, and update your row when done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 001  | [Latent Archive renders the collection's real colour as opaque pigment](001-latent-archive-pigment.md) | P1 | M | — | TODO |
+| 001  | [Latent Archive renders the collection's real colour as opaque pigment](001-latent-archive-pigment.md) | P1 | M | — | DONE (reviewed 2026-11-11, commits 9e93396, a1023a9, 48d2a58) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
