@@ -1,0 +1,45 @@
+{
+  "count": 600000,
+  "columns": [
+    {
+      "name": "z",
+      "type": "f32",
+      "offset": 0
+    },
+    {
+      "name": "lookback",
+      "type": "f32",
+      "offset": 2400000
+    },
+    {
+      "name": "ra",
+      "type": "f32",
+      "offset": 4800000
+    },
+    {
+      "name": "dec",
+      "type": "f32",
+      "offset": 7200000
+    },
+    {
+      "name": "tracer",
+      "type": "u8",
+      "offset": 9600000
+    }
+  ],
+  "zMin": 0.010049901902675629,
+  "zMax": 3.499677896499634,
+  "lookbackMin": 0.14408880472183228,
+  "lookbackMax": 11.992568969726562,
+  "tracerCounts": {
+    "BGS": 294429,
+    "LRG": 110630,
+    "ELG": 129559,
+    "QSO": 65382
+  },
+  "catalogCount": 11256587,
+  "source": "DESI Data Release 1, LSS clustering catalogues v1.5 (iron)",
+  "sourceUrl": "https://data.desi.lbl.gov/public/dr1/survey/catalogs/dr1/LSS/iron/LSScats/v1.5/",
+  "builtAt": "2026-10-30T22:34:48.317Z",
+  "seed": 1998
+}

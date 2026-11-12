@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Warming Rivers: nine regions' real yearly temperatures from 1850 to 2025, flowing as rivers of light into a dark centre that stands for now." />
+    <meta name="theme-color" content="#05060a" />
+    <title>Warming Rivers</title>
+  </head>
+  <body>
+    <main id="stage" aria-label="Warming Rivers artwork: nine regions' temperatures since 1850 flowing as rivers of light into a dark centre" aria-describedby="summary">
+      <canvas id="scene" aria-hidden="true"></canvas>
+      <div id="names" class="names" aria-hidden="true"></div>
+      <div id="labels" class="labels" aria-hidden="true"></div>
+
+      <header class="title">
+        <p class="crumbs"><span>data-art</span><span aria-hidden="true">/</span><span>warming-rivers</span></p>
+        <h1>Warming Rivers</h1>
+        <p id="summary" class="summary">175 years of real temperature, region by region, pouring in from 1850 to now.</p>
+      </header>
+
+      <figure class="legend" aria-label="Colour key">
+        <span class="legend-bar heat" aria-hidden="true"></span>
+        <figcaption>
+          <span>Coolest years</span>
+          <span>Hottest years</span>
+        </figcaption>
+        <p id="scale-note" class="legend-note">Each region on its own range</p>
+      </figure>
+
+      <nav class="dock" aria-label="Controls">
+        <div class="scale" role="group" aria-label="Colour scale">
+          <button type="button" class="text-button" data-scale="region" aria-pressed="true" aria-keyshortcuts="S">Per region</button>
+          <button type="button" class="text-button" data-scale="shared" aria-pressed="false">Shared</button>
+        </div>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="pause" class="icon-button" type="button" aria-label="Pause" aria-pressed="false" aria-keyshortcuts="Space">
+          <svg class="icon-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="3" width="2.5" height="10" rx="0.75" /><rect x="9.5" y="3" width="2.5" height="10" rx="0.75" /></svg>
+          <svg class="icon-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.4v9.2a.6.6 0 0 0 .9.5l7.3-4.6a.6.6 0 0 0 0-1L5.9 2.9a.6.6 0 0 0-.9.5Z" /></svg>
+        </button>
+        <button id="fullscreen" class="icon-button" type="button" aria-label="Fullscreen" aria-pressed="false" aria-keyshortcuts="F">
+          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.75 6V2.75H6M10 2.75h3.25V6M13.25 10v3.25H10M6 13.25H2.75V10" /></svg>
+        </button>
+        <button id="about-open" class="text-button" type="button" aria-haspopup="dialog" aria-keyshortcuts="A">About</button>
+      </nav>
+
+      <p id="status" class="status" role="status" aria-live="polite">Loading 175 years of temperature…</p>
+
+      <dialog id="about" class="about" aria-labelledby="about-title">
+        <form method="dialog" class="about-close-form">
+          <button class="icon-button about-close" aria-label="Close">
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8" /></svg>
+          </button>
+        </form>
+        <h2 id="about-title">What you are looking at</h2>
+        <p>
+          Nine rivers of light, one for each region of the world. Each river enters at the rim in 1850 and flows inward
+          year by year. The dark centre is 2025. As the light passes each year it takes that year's real temperature:
+          deep violet and red when the region was cool, amber and white-hot when it was hot.
+        </p>
+        <p>
+          <strong>Per region</strong> stretches each river over its own coolest-to-hottest range, so every region shows
+          its own change and every river ends white-hot. <strong>Shared</strong> puts all nine on one range, so you can
+          see how unequal the warming is: the Arctic burns while the ocean and the Antarctic stay dim.
+        </p>
+        <h3>2025 against the 1901–2000 average</h3>
+        <dl id="regions" class="bands"></dl>
+        <p class="fine">
+          Annual temperature departures from
+          <a href="https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series" target="_blank" rel="noopener noreferrer">NOAA NCEI Climate at a Glance</a>,
+          1850–2025. Values for the 1800s, especially near the poles, rest on sparse observations and carry wide uncertainty.
+          Rivers that meet near the centre can braid into each other; each point of light keeps its own region's colour.
+        </p>
+        <p class="fine keys"><kbd>Space</kbd> pause · <kbd>S</kbd> scale · <kbd>F</kbd> fullscreen · <kbd>A</kbd> about · <kbd>Esc</kbd> close</p>
+      </dialog>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
