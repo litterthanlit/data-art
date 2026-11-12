@@ -6,21 +6,36 @@
     "data": "Art Institute of Chicago · public-domain collection"
   },
   {
+    "slug": "warming-rivers",
+    "title": "Warming Rivers",
+    "summary": "Nine rivers of light, one for each region of the world, flow from 1850 to 2025 and take the colour of each year's real temperature.",
+    "data": "NOAA Climate at a Glance · nine regions · 1850–2025"
+  },
+  {
+    "slug": "redshift-tunnel",
+    "title": "Redshift Tunnel",
+    "summary": "Light from real galaxies and quasars streams inward. The red rim left about 12 billion years ago, and the centre is now.",
+    "data": "DESI Data Release 1 · 600,000 galaxies and quasars"
+  },
+  {
     "slug": "varna-weather-galaxy",
     "title": "Varna Weather Galaxy",
     "summary": "Eleven years of hourly weather over Varna, on the Black Sea, drawn as one slow galaxy.",
-    "data": "Open-Meteo archive · 96,432 hours · 2015–2025"
+    "data": "Open-Meteo archive · 96,432 hours · 2015–2025",
+    "hidden": true
   },
   {
     "slug": "solar-wind-breath",
     "title": "Solar Wind Breath",
     "summary": "The Sun's plasma stream past Earth during the storms of May 2024.",
-    "data": "NASA DONKI eruption and storm catalogues · plasma values reconstructed"
+    "data": "NASA DONKI eruption and storm catalogues · plasma values reconstructed",
+    "hidden": true
   },
   {
     "slug": "trade-organism",
     "title": "Trade Organism",
     "summary": "Global trade drawn as a living system of hubs and flows.",
-    "data": "Illustrative · scaled from public port and trade references"
+    "data": "Illustrative · scaled from public port and trade references",
+    "hidden": true
   }
 ]

@@ -4,7 +4,7 @@ Rivers of light from real galaxies and quasars stream in from the edges and diss
 
 Inspired by the stargate sequence in *2001: A Space Odyssey*, kishimisu's *Eclipse*, and Tiziana Alocci's particle sculptures.
 
-**Live:** <https://redshift-tunnel.vercel.app>
+**Live:** <https://data-art-three.vercel.app/redshift-tunnel/>
 
 Open locally:
 

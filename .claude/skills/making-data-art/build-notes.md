@@ -29,7 +29,8 @@
 
 ## Live links (Vercel)
 
-- Each piece gets its own Vercel project in the team `nicks-projects-14b58bdc`. Create it with `framework: "vite"`, `rootDirectory: "projects/<name>"`, `gitRepository: litterthanlit/data-art`, `enableAffectedProjectsDeployments: true`, and `ssoProtection: null`. Without that last setting, the links ask visitors to log in to Vercel.
-- Deploy from Git with `create_deployment` using `gitSource {type: "github", org: "litterthanlit", repo: "data-art", ref, sha}` and `target: "production"`. Vercel builds from the repo, so the committed `public/data/` ships as-is, including binaries. Production lives at `https://<name>.vercel.app`.
-- Projects build one at a time, so a second deployment may sit in `QUEUED` for a while.
+- One Vercel project, `data-art` in the team `nicks-projects-14b58bdc`, serves every piece from the repository root. Do not create a Vercel project for a new piece: a project that points at one folder fails on every branch that does not have that folder.
+- A piece goes live when its folder is merged into `main`. The site build (`npm run build` at the repository root) finds every folder under `projects/` with a `build` script and serves it at `https://data-art-three.vercel.app/<name>/`. See `site/README.md`.
+- Load data through `import.meta.env.BASE_URL`, because the piece is served from a sub-path. Vercel builds from the repo, so the committed `public/data/` ships as-is, including binaries.
+- Add an entry to `site/pieces.json` to place and word the piece on the home page, or set `"hidden": true` there to keep it out of the site.
 - Verify from outside: `curl` the page, the data file and the JS bundle, and check the bundle contains the expected code.

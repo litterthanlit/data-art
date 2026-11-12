@@ -16,6 +16,7 @@ npm test        # checks the gallery helpers
 - `scripts/build-site.mjs` finds every folder under `projects/` that has a `build` script, builds it with its base path set to `/<folder name>/`, and copies its output to `dist/<folder name>/`.
 - `site/index.html` is the home page template. The build fills in the list of pieces and the count.
 - `site/pieces.json` sets the order and the wording on the home page. A piece that is not listed there still appears, after the listed ones, with the title and description from its own `index.html`.
+- An entry with `"hidden": true` keeps its piece out of the site: it is not built, not listed and has no address. The piece stays in the repository and still runs locally. Remove the flag to publish it again.
 
 ## Adding a piece
 

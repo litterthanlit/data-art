@@ -4,7 +4,7 @@ Nine rivers of light, one for each region of the world, flow from 1850 at the ri
 
 Built on the river engine from [Redshift Tunnel](../redshift-tunnel), with the same braided currents and long-exposure trails. Only the meaning of the light changes.
 
-**Live:** <https://warming-rivers.vercel.app>
+**Live:** <https://data-art-three.vercel.app/warming-rivers/>
 
 Open locally:
 
