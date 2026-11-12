@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { arrangePieces, isSlug, readMeta, renderGallery } from "./lib/gallery.mjs";
+import { arrangePieces, hiddenSlugs, isSlug, readMeta, renderGallery } from "./lib/gallery.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PROJECTS = join(ROOT, "projects");
@@ -16,8 +16,14 @@ const OUT = join(ROOT, "dist");
 const INSTALL = !process.argv.includes("--no-install"); // reruns can skip the clean installs
 
 async function main() {
-  const slugs = await findPieces();
-  if (!slugs.length) throw new Error("No buildable pieces under projects/");
+  const manifest = JSON.parse(await readFile(join(SITE, "pieces.json"), "utf8"));
+  const hidden = hiddenSlugs(manifest);
+  const found = await findPieces();
+  const slugs = found.filter((slug) => !hidden.has(slug));
+  for (const slug of found.filter((name) => hidden.has(name))) {
+    console.log(`hidden: ${slug} (marked in site/pieces.json)`);
+  }
+  if (!slugs.length) throw new Error("No visible pieces to build under projects/");
 
   await rm(OUT, { recursive: true, force: true });
   await mkdir(OUT, { recursive: true });
@@ -33,7 +39,6 @@ async function main() {
     built.push({ slug, ...readMeta(await readFile(join(dir, "index.html"), "utf8")) });
   }
 
-  const manifest = JSON.parse(await readFile(join(SITE, "pieces.json"), "utf8"));
   const pieces = arrangePieces(built, manifest);
   const template = await readFile(join(SITE, "index.html"), "utf8");
   await writeFile(join(OUT, "index.html"), renderGallery(template, pieces));

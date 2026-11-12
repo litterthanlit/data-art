@@ -1,11 +1,22 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { arrangePieces, escapeHtml, isSlug, readMeta, renderGallery, renderPiece } from "./lib/gallery.mjs";
+import { arrangePieces, escapeHtml, hiddenSlugs, isSlug, readMeta, renderGallery, renderPiece } from "./lib/gallery.mjs";
 
 test("a slug is lowercase letters, digits and hyphens, and does not start with a hyphen", () => {
   assert.equal(isSlug("latent-archive"), true);
   assert.equal(isSlug("piece2"), true);
   for (const name of ["Latent Archive", "-draft", "a/b", "", "über", "a_b"]) assert.equal(isSlug(name), false, name);
+});
+
+test("only entries marked hidden: true are hidden", () => {
+  const manifest = [
+    { slug: "shown" },
+    { slug: "off", hidden: true },
+    { slug: "explicit", hidden: false },
+    { slug: "stringly", hidden: "true" },
+  ];
+  assert.deepEqual([...hiddenSlugs(manifest)], ["off"]);
+  assert.equal(hiddenSlugs().size, 0);
 });
 
 test("readMeta reads the title and description a piece declares", () => {

@@ -15,6 +15,11 @@ export function escapeHtml(value = "") {
     .replace(/"/g, "&quot;");
 }
 
+// A manifest entry marked hidden keeps its piece out of the site: it is neither built nor listed.
+export function hiddenSlugs(manifest = []) {
+  return new Set(manifest.filter((entry) => entry.hidden === true).map((entry) => entry.slug));
+}
+
 // Title and description as a piece declares them in its own index.html.
 export function readMeta(html) {
   const title = /<title>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? "";
