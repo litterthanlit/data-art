@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Data Art: interactive sculptures made from real data. Museum collections, weather, solar storms and trade, each running live in the browser." />
+    <meta name="theme-color" content="#050506" />
+    <meta property="og:title" content="Data Art" />
+    <meta property="og:description" content="Interactive sculptures made from real data, each running live in the browser." />
+    <meta property="og:type" content="website" />
+    <title>Data Art</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #050506;
+        --ink: #ededed;
+        --muted: #a1a1a1;
+        --faint: #8a8a8a;
+        --line: rgba(255, 255, 255, 0.1);
+        --accent: #f2c48d;
+        --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        --gutter: clamp(20px, 4vw, 56px);
+        --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 4px;
+      }
+
+      .label {
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+
+      .page {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 0 var(--gutter);
+      }
+
+      .masthead {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 24px;
+        padding: 28px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .masthead .label:first-child {
+        color: var(--ink);
+      }
+
+      /* Asymmetric: the statement sits on the left two thirds, the right third stays empty. */
+      .intro {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        column-gap: 24px;
+        padding: clamp(72px, 14vh, 168px) 0 clamp(56px, 10vh, 120px);
+      }
+
+      .intro h1 {
+        grid-column: 1 / span 8;
+        margin: 0;
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: clamp(40px, 5.6vw, 76px);
+        line-height: 1.04;
+        letter-spacing: -0.015em;
+      }
+
+      .intro p {
+        grid-column: 1 / span 5;
+        margin: 32px 0 0;
+        max-width: 46ch;
+        font-size: 17px;
+        color: var(--muted);
+      }
+
+      .pieces {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        border-top: 1px solid var(--line);
+      }
+
+      .piece {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .piece a {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        column-gap: 24px;
+        align-items: baseline;
+        padding: 40px 0;
+      }
+
+      .piece-index {
+        grid-column: 1 / span 1;
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        color: var(--faint);
+      }
+
+      .piece-body {
+        grid-column: 2 / span 6;
+        display: block;
+      }
+
+      .piece-title {
+        display: block;
+        font-family: var(--serif);
+        font-size: clamp(28px, 3vw, 40px);
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+        transition: transform 320ms var(--ease), color 320ms var(--ease);
+      }
+
+      .piece-summary {
+        display: block;
+        margin-top: 12px;
+        max-width: 52ch;
+        color: var(--muted);
+      }
+
+      .piece-data {
+        grid-column: 9 / span 3;
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.6;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+
+      .piece-arrow {
+        grid-column: 12 / span 1;
+        justify-self: end;
+        font-size: 20px;
+        color: var(--faint);
+        transition: transform 320ms var(--ease), color 320ms var(--ease);
+      }
+
+      .piece a:hover .piece-title,
+      .piece a:focus-visible .piece-title {
+        color: var(--accent);
+        transform: translateX(8px);
+      }
+
+      .piece a:hover .piece-arrow,
+      .piece a:focus-visible .piece-arrow {
+        color: var(--accent);
+        transform: translateX(6px);
+      }
+
+      .colophon {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        flex-wrap: wrap;
+        padding: 40px 0 56px;
+      }
+
+      @media (max-width: 760px) {
+        .intro h1,
+        .intro p {
+          grid-column: 1 / -1;
+        }
+
+        .piece a {
+          row-gap: 16px;
+          padding: 32px 0;
+        }
+
+        .piece-index {
+          grid-column: 1 / span 2;
+        }
+
+        .piece-body {
+          grid-column: 3 / span 9;
+        }
+
+        .piece-arrow {
+          grid-column: 12 / span 1;
+          grid-row: 1;
+        }
+
+        .piece-data {
+          grid-column: 3 / -1;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .piece-title,
+        .piece-arrow {
+          transition: none;
+        }
+
+        .piece a:hover .piece-title,
+        .piece a:focus-visible .piece-title,
+        .piece a:hover .piece-arrow,
+        .piece a:focus-visible .piece-arrow {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="masthead">
+        <span class="label">Data Art</span>
+        <span class="label"><!-- count --></span>
+      </header>
+
+      <main>
+        <section class="intro" aria-labelledby="statement">
+          <h1 id="statement">Sculptures made of data.</h1>
+          <p>
+            Each piece takes one real dataset and gives it a body: a museum's collection, a city's weather, a week of
+            solar storms. They run live in your browser. Open one, then drag, scroll and wait.
+          </p>
+        </section>
+
+        <ol class="pieces" aria-label="Works">
+<!-- pieces -->
+        </ol>
+      </main>
+
+      <footer class="colophon">
+        <span class="label"><!-- count --> · built with Three.js</span>
+        <span class="label">Best on a large screen</span>
+      </footer>
+    </div>
+  </body>
+</html>

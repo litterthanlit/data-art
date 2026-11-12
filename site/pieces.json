@@ -1,0 +1,26 @@
+[
+  {
+    "slug": "latent-archive",
+    "title": "Latent Archive",
+    "summary": "20,000 museum artworks become 320,000 points of pigment that sort themselves by date, regroup by likeness, then dissolve into flowing colour.",
+    "data": "Art Institute of Chicago · public-domain collection"
+  },
+  {
+    "slug": "varna-weather-galaxy",
+    "title": "Varna Weather Galaxy",
+    "summary": "Eleven years of hourly weather over Varna, on the Black Sea, drawn as one slow galaxy.",
+    "data": "Open-Meteo archive · 96,432 hours · 2015–2025"
+  },
+  {
+    "slug": "solar-wind-breath",
+    "title": "Solar Wind Breath",
+    "summary": "The Sun's plasma stream past Earth during the storms of May 2024.",
+    "data": "NASA DONKI eruption and storm catalogues · plasma values reconstructed"
+  },
+  {
+    "slug": "trade-organism",
+    "title": "Trade Organism",
+    "summary": "Global trade drawn as a living system of hubs and flows.",
+    "data": "Illustrative · scaled from public port and trade references"
+  }
+]
