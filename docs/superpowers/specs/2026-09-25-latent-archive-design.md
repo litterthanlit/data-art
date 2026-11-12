@@ -17,7 +17,7 @@ Data metaphor:
 
 - Full-screen Three.js scene with one GPU point system of about 320k points.
 - No frames, walls or thumbnails in the 3D space. The only literal image appears in the inspector on hover.
-- Additive glow with half-resolution bloom on a near-black background.
+- Opaque, depth-tested pigment with a light half-resolution bloom on a near-black background. Cell colours are decoded from sRGB, lifted in chroma by one fixed factor and tone mapped. (Amended 2026-11-11: the first build used additive glow, which summed to white.)
 - Colour comes only from the artworks. The UI has a single warm accent (`#f2c48d`).
 - The auto-cycle runs Archive (18s), Latent (20s), Dream (16s), Latent (12s), and repeats.
 - During transitions, pigment arcs through a curl field rather than moving in a straight line.

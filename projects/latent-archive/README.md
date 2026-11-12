@@ -22,6 +22,7 @@ http://127.0.0.1:5173/
 
 - [Art Institute of Chicago API](https://api.artic.edu/docs/): public-domain artworks with images. The metadata is CC0.
 - Each work's `thumbnail.lqip` (a tiny base64 GIF the API ships with every record) is decoded and averaged into a **4×4 grid of real colours**. The 16 cells are the work's pigments. No full images are downloaded at build time.
+- The 20,000 works are not a uniform sample. A uniform draw returns the collection's own proportions: 43% prints and drawings, mostly the colour of paper. Each department instead gets a quota that grows as its size to the power 0.6, which brings Prints and Drawings down to about 28%, and inside a department colourful works and rare hues are more likely to be drawn. The draw is seeded, so every build picks the same works. `npm test` checks the sampler.
 - The hover inspector tries to lazy-load the real image from AIC's IIIF server. That host currently answers cross-site requests with a Cloudflare challenge, which an `<img>` cannot pass, so the inspector falls back to the work's 4×4 colour memory and links out to artic.edu. After three refusals in a row it stops asking.
 
 `npm run data` caches API responses locally in `scripts/cache/` (`aic-artworks.json`, about 22 MB for the full 58k-work collection, and per-range pages in `.ranges/`; both are gitignored). Once the cache exists, reruns work offline. The committed `public/data/` files are all the site needs. Pass `--refresh` to fetch again, `ARCHIVE_TARGET=5000` to build a smaller sample, or `ARCHIVE_CACHE=path.json` to build from another cache.
@@ -43,6 +44,7 @@ The latent cloud is named at build time. A voxel flood fill finds the separated 
 ## Visual mapping
 
 - One artwork → a 4×4 mosaic of its own colours, always facing the viewer
+- Pigment is opaque: each cell is drawn in its own colour, with depth, so dense regions stay coloured instead of adding up to white. Saturation is lifted by one fixed factor (`uChroma`, 1.6 in `src/dream/DreamField.js`); hue is never changed
 - Archive state → the collection in chronological order
 - Latent state → nebulae of visual likeness
 - Dream state → curl-noise flow pulls each cell off its tile into rivers of paint

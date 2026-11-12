@@ -87,6 +87,7 @@ attribute float aSeed;
 varying vec3 vColor;
 varying float vAlpha;
 varying float vGlow;
+varying float vDepth;
 
 ${noise}
 
@@ -128,36 +129,54 @@ void main() {
 
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mv;
+  // Opaque pigment needs depth priority: works outside the era fall to the back and the
+  // recalled work comes to the front, so nothing hides what the viewer asked to see.
+  gl_Position.z = mix(gl_Position.z, gl_Position.w * 0.999, (1.0 - inEra) * (1.0 - isHover));
+  gl_Position.z = mix(gl_Position.z, -gl_Position.w * 0.999, isHover);
 
   float size = uPointSize * (1.0 + isHover * 1.4) * (0.85 + uDream * 0.35 * cellSeed);
   gl_PointSize = max(1.0, size * uPixelRatio * uViewScale * (60.0 / -mv.z));
 
   vColor = aColor;
   vGlow = isHover;
-  vAlpha = mix(0.035, 1.0, inEra) * (0.72 + 0.28 * sin(uTime * 0.6 + aSeed * 40.0));
+  vDepth = -mv.z;
+  vAlpha = mix(0.035, 1.0, inEra) * (0.86 + 0.14 * sin(uTime * 0.6 + aSeed * 40.0));
 }
 `;
 
 export const fragmentShader = /* glsl */ `
 uniform float uIntensity;
 uniform float uHasHover;
+uniform float uChroma;    // 1 = the stored colour, above 1 pushes each pigment away from its own grey
+uniform float uCameraZ;   // camera distance, the centre of the depth fade
+uniform float uDepthFloor; // brightness of the farthest pigment
 
 varying vec3 vColor;
 varying float vAlpha;
 varying float vGlow;
+varying float vDepth;
+
+vec3 srgbToLinear(vec3 c) {
+  return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
+}
 
 void main() {
   vec2 p = gl_PointCoord - 0.5;
   float d = length(p);
   if (d > 0.5) discard;
   float core = smoothstep(0.5, 0.0, d);
-  float falloff = core * core;
 
-  // Lift dark pigments (multiplicatively) so near-black paintings still read as embers.
-  vec3 color = pow(vColor, vec3(0.8)) * 1.1;
+  // The cells are sRGB bytes. Decode them so the output pass does not encode them twice,
+  // which washed every pigment toward white.
+  vec3 color = srgbToLinear(vColor);
+  float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  color = max(vec3(0.0), mix(vec3(luma), color, uChroma));
   color = mix(color, vec3(1.0), vGlow * 0.35);
 
+  // Pigment is matter, not light: each grain is an opaque soft dome that darkens with distance.
+  float dome = 0.55 + 0.45 * core;
+  float depthFade = mix(uDepthFloor, 1.0, smoothstep(uCameraZ + 46.0, uCameraZ - 30.0, vDepth));
   float dim = mix(1.0, mix(0.35, 1.8, vGlow), uHasHover);
-  gl_FragColor = vec4(color * falloff * uIntensity * vAlpha * dim, 1.0);
+  gl_FragColor = vec4(color * dome * depthFade * uIntensity * vAlpha * dim, 1.0);
 }
 `;
