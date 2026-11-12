@@ -10,12 +10,14 @@ honor its STOP conditions, and update your row when done.
 |------|-------|----------|--------|------------|--------|
 | 001  | [Latent Archive renders the collection's real colour as opaque pigment](001-latent-archive-pigment.md) | P1 | M | — | DONE (reviewed 2026-11-11, commits 9e93396, a1023a9, 48d2a58) |
 | 002  | [One build serves every piece under one domain, with a gallery home page](002-one-site.md) | P1 | M | — | DONE (reviewed 2026-11-12, commits 352c64a, 8e3acb8, 3407ff3) |
+| 003  | [The site lists Warming Rivers and Redshift Tunnel and hides three unfinished pieces](003-publish-and-hide.md) | P1 | S | 002 | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
 ## Dependency notes
 
 - None yet. Plan 001 covers audit findings 1–3 (no colour, uniform sample, light stacking to white).
+- Plan 003 builds on 002: it adds a hide switch to the site manifest and uses it.
 - Plan 002 is independent of 001. It covers the landing-page half of finding 10 and the lockfile half of finding 11, and it replaces one Vercel project per piece with one project for the whole repository.
 
 ## Audit findings not yet planned
