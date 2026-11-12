@@ -9,12 +9,14 @@ honor its STOP conditions, and update your row when done.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 001  | [Latent Archive renders the collection's real colour as opaque pigment](001-latent-archive-pigment.md) | P1 | M | — | DONE (reviewed 2026-11-11, commits 9e93396, a1023a9, 48d2a58) |
+| 002  | [One build serves every piece under one domain, with a gallery home page](002-one-site.md) | P1 | M | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
 ## Dependency notes
 
 - None yet. Plan 001 covers audit findings 1–3 (no colour, uniform sample, light stacking to white).
+- Plan 002 is independent of 001. It covers the landing-page half of finding 10 and the lockfile half of finding 11, and it replaces one Vercel project per piece with one project for the whole repository.
 
 ## Audit findings not yet planned
 
@@ -26,8 +28,8 @@ From the 2026-11-11 audit, in the order they were ranked:
 - 7. No sound in three of the four pieces.
 - 8. Trade Organism is nearly a black screen and its data is illustrative.
 - 9. Solar Wind Breath's plasma values are reconstructed, not measured.
-- 10. No landing page, share image, or still and video export.
-- 11. `npm ci` fails in `trade-organism` and `varna-weather-galaxy` (lockfiles out of sync); no CI.
+- 10. No share image, or still and video export. (The landing page is plan 002.)
+- 11. No CI. (The out-of-sync lockfiles are fixed in plan 002.)
 
 ## Findings considered and rejected
 
