@@ -58,8 +58,8 @@ with no failed requests.
 - `npm ci` fails in `projects/trade-organism` and `projects/varna-weather-galaxy` with
   `npm ci can only install packages when your package.json and package-lock.json … are in sync`
   and `Missing: @emnapi/core@… from lock file`. Their lockfiles lack some optional entries.
-  `npm install` adds them without changing any installed version (Vite stays at 8.0.11) and
-  without touching `package.json`. `npm ci` passes in the other two pieces.
+  `npm install` adds them without changing any installed version (Vite stays at 8.0.11 in
+  `trade-organism` and 8.0.10 in `varna-weather-galaxy`) and without touching `package.json`. `npm ci` passes in the other two pieces.
 - The root `README.md` is ten lines. Its third line is `Interactive data visualization artworks.`
   and the rest is a "Projects" list. Another unmerged branch appends to that list, so this plan
   must NOT edit the list or add anything after it.
@@ -127,7 +127,8 @@ In `projects/trade-organism`, run `npm install --no-audit --no-fund`. Then do th
 
 - `git status --short .` (run inside the folder) lists exactly one line: ` M package-lock.json`.
   If `package.json` is listed, STOP.
-- `grep -A1 '"node_modules/vite": {' package-lock.json` shows `"version": "8.0.11"`.
+- `grep -A1 '"node_modules/vite": {' package-lock.json` shows the same version as before the install
+  (`8.0.11` in `trade-organism`, `8.0.10` in `varna-weather-galaxy`).
 - `rm -rf node_modules && npm ci --no-audit --no-fund` exits 0.
 
 Commit both lockfiles: `Bring the Trade Organism and Varna lockfiles back in sync`.

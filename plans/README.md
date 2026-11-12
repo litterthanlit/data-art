@@ -9,7 +9,7 @@ honor its STOP conditions, and update your row when done.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 001  | [Latent Archive renders the collection's real colour as opaque pigment](001-latent-archive-pigment.md) | P1 | M | — | DONE (reviewed 2026-11-11, commits 9e93396, a1023a9, 48d2a58) |
-| 002  | [One build serves every piece under one domain, with a gallery home page](002-one-site.md) | P1 | M | — | TODO |
+| 002  | [One build serves every piece under one domain, with a gallery home page](002-one-site.md) | P1 | M | — | DONE (reviewed 2026-11-12, commits 352c64a, 8e3acb8, 3407ff3) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
